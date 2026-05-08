@@ -1,4 +1,4 @@
-// UniverCert · dashboard shell
+// UniverCert · dashboard shell com nav completa
 
 export const runtime = 'edge';
 
@@ -16,15 +16,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 Univer<span className="text-primary">Cert</span>
               </span>
             </a>
-            <nav className="hidden md:flex gap-6 text-sm font-semibold text-gray-600">
+            <nav className="hidden md:flex gap-5 text-sm font-semibold text-gray-600">
               <a href="/dashboard" className="hover:text-primary">Dashboard</a>
               <a href="/queue" className="hover:text-primary">Fila</a>
-              <a href="/bulk" className="hover:text-primary">Bulk emit</a>
+              <a href="/credentials" className="hover:text-primary">Certificados</a>
+              <a href="/recipients" className="hover:text-primary">Alunos</a>
+              <a href="/bulk" className="hover:text-primary">Bulk</a>
               <a href="/templates" className="hover:text-primary">Templates</a>
               <a href="/integrations" className="hover:text-primary">Integrações</a>
             </nav>
           </div>
-          <div className="text-xs text-gray-500">UniverHair (workspace)</div>
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-gray-500">UniverHair</div>
+            <a href="/audit" className="text-xs text-gray-500 hover:text-primary" title="Audit log">
+              📋
+            </a>
+            <form action="/api/auth/sign-out" method="POST" className="inline">
+              <button type="submit" className="text-xs text-gray-500 hover:text-danger" title="Sair">
+                Sair
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       {children}
