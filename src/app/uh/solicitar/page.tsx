@@ -1,20 +1,19 @@
 // UniverCert · form público de solicitação de certificado UniverHair
-// Fluxo: aluno conclui curso na Fluent → vem pra cá → preenche → entra na fila
 
 export const runtime = 'edge';
 
-export default function SolicitarPage({
-  searchParams,
-}: {
-  searchParams: { curso?: string; turma?: string };
-}) {
-  const cursoPreenchido = searchParams.curso ?? '';
-  const turmaPreenchida = searchParams.turma ?? '';
+type Params = {
+  searchParams: Promise<{ curso?: string; turma?: string }>;
+};
+
+export default async function SolicitarPage({ searchParams }: Params) {
+  const { curso, turma } = await searchParams;
+  const cursoPreenchido = curso ?? '';
+  const turmaPreenchida = turma ?? '';
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary-soft to-white py-12 px-4">
       <div className="max-w-xl mx-auto">
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
             🏆
@@ -29,7 +28,7 @@ export default function SolicitarPage({
             <h1 className="text-2xl font-extrabold mb-2">Solicitar meu certificado</h1>
             <p className="text-sm text-gray-600">
               Você concluiu o curso{' '}
-              {cursoPreenchido && <strong>"{cursoPreenchido}"</strong>}
+              {cursoPreenchido && <strong>&ldquo;{cursoPreenchido}&rdquo;</strong>}
               {!cursoPreenchido && <span className="text-gray-400">(selecione abaixo)</span>}.
               Preencha os dados e nossa equipe valida em até 48h.
             </p>

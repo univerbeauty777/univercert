@@ -2,6 +2,7 @@
 // Validação 1-click do certificado. Acessível sem login.
 
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces, brandKits, verifyLogs } from '@/db/schema';
@@ -9,7 +10,7 @@ import { ID } from '@/lib/ulid';
 
 export const runtime = 'edge';
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 async function getCredentialDetails(id: string) {
   const db = getDb();
@@ -29,16 +30,23 @@ async function getCredentialDetails(id: string) {
   return row;
 }
 
-async function logView(credentialId: string, headers: Headers) {
+type LogContext = {
+  ipCountry?: string;
+  ipCity?: string;
+  userAgent?: string;
+  referer?: string;
+};
+
+async function logView(credentialId: string, ctx: LogContext) {
   try {
     const db = getDb();
     await db.insert(verifyLogs).values({
       id: ID.verifyLog(),
       credentialId,
-      ipCountry: headers.get('cf-ipcountry') ?? undefined,
-      ipCity: headers.get('cf-ipcity') ?? undefined,
-      userAgent: headers.get('user-agent') ?? undefined,
-      referer: headers.get('referer') ?? undefined,
+      ipCountry: ctx.ipCountry,
+      ipCity: ctx.ipCity,
+      userAgent: ctx.userAgent,
+      referer: ctx.referer,
     });
   } catch (e) {
     console.error('verify log failed', e);
@@ -46,17 +54,22 @@ async function logView(credentialId: string, headers: Headers) {
 }
 
 export default async function VerifyPage({ params }: Params) {
-  const data = await getCredentialDetails(params.id);
+  const { id } = await params;
+  const data = await getCredentialDetails(id);
   if (!data || !data.credential) notFound();
 
   const { credential, recipient, workspace, brand } = data;
   const isRevoked = credential.revokedAt !== null;
   const isExpired = credential.expiresAt && credential.expiresAt < Math.floor(Date.now() / 1000);
 
-  // Fire-and-forget log (edge-safe)
   if (!isRevoked) {
-    const { headers } = await import('next/headers').then((m) => m).catch(() => ({ headers: () => new Headers() }));
-    void logView(credential.id, headers());
+    const h = await headers();
+    void logView(credential.id, {
+      ipCountry: h.get('cf-ipcountry') ?? undefined,
+      ipCity: h.get('cf-ipcity') ?? undefined,
+      userAgent: h.get('user-agent') ?? undefined,
+      referer: h.get('referer') ?? undefined,
+    });
   }
 
   const status = isRevoked
@@ -68,7 +81,6 @@ export default async function VerifyPage({ params }: Params) {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-12 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Header com brand */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <div
@@ -88,7 +100,6 @@ export default async function VerifyPage({ params }: Params) {
           </div>
         </div>
 
-        {/* Cartão do certificado */}
         <div className="card shadow-xl">
           <div className="text-xs uppercase tracking-widest text-gray-400 mb-2">Certificado de Conclusão</div>
           <h1 className="text-3xl font-extrabold mb-4">{recipient?.name}</h1>
