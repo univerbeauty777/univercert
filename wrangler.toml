@@ -1,0 +1,89 @@
+# UniverCert · Cloudflare Workers/Pages config
+# Provisionado via Cowork em 08/05/2026
+# Account: DXPRO Univerbeauty (4a89b58af57b3ffb99858479a75b1e61)
+
+name = "univercert"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ----------------------------------------
+# D1 Database — univercert-mvp (SQLite)
+# Region: ENAM (US East · Ashburn)
+# ----------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "univercert-mvp"
+database_id = "161fc60a-d5d3-4722-8c04-d8120f2682bc"
+
+# ----------------------------------------
+# R2 Bucket — univercert-assets
+# Storage para PDFs, PNGs, logos, fundos, assinaturas
+# Sem cobrança de egress (vs Supabase $0.09/GB)
+# ----------------------------------------
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "univercert-assets"
+
+# ----------------------------------------
+# KV Namespace — univercert-cache
+# Sessions short-lived, rate limiting, cache de verify pages
+# ----------------------------------------
+[[kv_namespaces]]
+binding = "CACHE"
+id = "155def9a0c5249bca41686d25e4f7208"
+
+# ----------------------------------------
+# Browser Rendering — para gerar PDFs dos certificados
+# Habilitar no dashboard Cloudflare (Workers > Browser Rendering)
+# ----------------------------------------
+browser = { binding = "BROWSER" }
+
+# ----------------------------------------
+# Variáveis de ambiente públicas
+# ----------------------------------------
+[vars]
+APP_NAME = "UniverCert"
+APP_URL = "https://univercert.com.br"
+DEFAULT_LOCALE = "pt-BR"
+SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
+
+# ----------------------------------------
+# Secrets — definir via: wrangler secret put NOME
+# (NÃO commitar secrets neste arquivo!)
+# ----------------------------------------
+# wrangler secret put RESEND_API_KEY
+# wrangler secret put META_WHATSAPP_TOKEN
+# wrangler secret put META_WHATSAPP_PHONE_ID
+# wrangler secret put ASAAS_API_KEY
+# wrangler secret put NFEIO_API_KEY
+# wrangler secret put BETTER_AUTH_SECRET
+# wrangler secret put GOOGLE_OAUTH_CLIENT_ID
+# wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
+# wrangler secret put HOTMART_WEBHOOK_SECRET
+# wrangler secret put MEMBERKIT_WEBHOOK_SECRET
+# wrangler secret put FLUENT_WEBHOOK_SECRET
+
+# ----------------------------------------
+# Routes — produção
+# ----------------------------------------
+# [[routes]]
+# pattern = "univercert.com.br/*"
+# zone_name = "univercert.com.br"
+
+# [[routes]]
+# pattern = "*.univercert.com.br/*"  # multi-tenant subdomain (white-label)
+# zone_name = "univercert.com.br"
+
+# ----------------------------------------
+# Queues — para emissão em lote (free 1M ops/mês)
+# Habilitar quando Sprint 2 estiver pronto
+# ----------------------------------------
+# [[queues.producers]]
+# binding = "ISSUE_QUEUE"
+# queue = "univercert-issue-jobs"
+#
+# [[queues.consumers]]
+# queue = "univercert-issue-jobs"
+# max_batch_size = 10
+# max_batch_timeout = 30
