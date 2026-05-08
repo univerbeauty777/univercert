@@ -15,14 +15,16 @@ export const workspaces = sqliteTable('workspaces', {
   updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
 });
 
-// 2. USERS
+// 2. USERS — schema Better Auth compatible
+// Sprint 12 fix: 'image' (não imageUrl) é o nome esperado pelo Better Auth.
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   name: text('name'),
-  imageUrl: text('image_url'),
+  image: text('image'), // Better Auth standard
+  imageUrl: text('image_url'), // legacy, mantido pra compat
   passwordHash: text('password_hash'),
-  emailVerified: integer('email_verified').notNull().default(0),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   lastLoginAt: integer('last_login_at'),
   createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),

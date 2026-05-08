@@ -20,17 +20,43 @@ export const runtime = 'edge';
 
 const app = new Hono().basePath('/api/v1');
 
-app.use('*', cors());
+// CORS — apenas origens conhecidas (produção + preview + dev local)
+const ALLOWED_ORIGINS = [
+  'https://univercert.com.br',
+  'https://univercert.pages.dev',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+app.use(
+  '*',
+  cors({
+    origin: (origin) => {
+      if (!origin) return ALLOWED_ORIGINS[0]; // server-to-server requests
+      if (ALLOWED_ORIGINS.includes(origin)) return origin;
+      // Permitir subdomínios *.univercert.com.br (white-label)
+      if (origin.endsWith('.univercert.com.br')) return origin;
+      // Preview deployments do Cloudflare Pages
+      if (origin.endsWith('.univercert.pages.dev')) return origin;
+      return ALLOWED_ORIGINS[0]; // bloqueia (CORS irá rejeitar fetch)
+    },
+    credentials: true,
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    maxAge: 600,
+  }),
+);
 
-// Global error handler — retorna JSON com mensagem em vez de "Internal Server Error" puro
+// Global error handler
 app.onError((err, c) => {
   const e = err as Error;
   console.error('[api error]', e?.message, e?.stack);
+  // Em prod, NÃO expor stack pra clients externos
+  const isDev = c.req.header('host')?.includes('localhost') ?? false;
   return c.json(
     {
       error: 'internal',
-      message: e?.message ?? String(err),
-      stack: e?.stack?.split('\n').slice(0, 6).join(' | '),
+      message: e?.message ?? 'unknown',
+      ...(isDev ? { stack: e?.stack?.split('\n').slice(0, 6).join(' | ') } : {}),
     },
     500,
   );
