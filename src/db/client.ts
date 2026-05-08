@@ -24,7 +24,7 @@ export function getDb(): DB {
 export function getAssetsBucket(): R2Bucket {
   const { env } = getRequestContext();
   // @ts-expect-error - ASSETS binding is configured in wrangler.toml
-  return env.ASSETS as R2Bucket;
+  return env.R2_ASSETS as R2Bucket;
 }
 
 /**
