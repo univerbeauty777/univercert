@@ -1,42 +1,29 @@
-// UniverCert · Better Auth configurado para D1 + Drizzle
-// Doc: https://www.better-auth.com/docs/adapters/drizzle
+// UniverCert · auth (placeholder Sprint 0)
+// Sprint 1: integrar Better Auth (better-auth + drizzle adapter) com D1.
+// Por enquanto stub para o build passar.
 
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getDb } from '@/db/client';
-import * as schema from '@/db/schema';
+export type SessionUser = {
+  id: string;
+  email: string;
+  name?: string;
+  workspaceId: string;
+  role: 'admin' | 'editor' | 'aprovador' | 'viewer';
+};
 
 /**
- * Lazy auth instance — Better Auth precisa do DB do request context,
- * então criamos por request (Cloudflare Workers pattern).
+ * Stub: retorna null no Sprint 0.
+ * Sprint 1: ler cookie de sessão, consultar D1 sessions table, retornar user.
  */
-export function getAuth() {
-  const db = getDb();
-  return betterAuth({
-    database: drizzleAdapter(db, {
-      provider: 'sqlite',
-      schema: {
-        user: schema.users,
-        session: schema.sessions,
-        // Better Auth também espera `account` e `verification` — para OAuth e email confirm.
-        // Adicionar nas próximas migrations:
-        //   account: schema.accounts,
-        //   verification: schema.verifications,
-      },
-    }),
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: false, // ativar quando Resend estiver configurado
-    },
-    socialProviders: {
-      google: {
-        clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
-        clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
-      },
-    },
-    secret: process.env.BETTER_AUTH_SECRET || 'dev-only-change-me',
-    baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
-  });
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  return null;
 }
 
-export type Auth = ReturnType<typeof getAuth>;
+/**
+ * Stub: throw no Sprint 0.
+ * Sprint 1: redirecionar pra /sign-in se não logado.
+ */
+export async function requireUser(): Promise<SessionUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('UNAUTHENTICATED');
+  return user;
+}

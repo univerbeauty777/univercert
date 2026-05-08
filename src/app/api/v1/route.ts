@@ -1,11 +1,9 @@
 // UniverCert · API v1 (Hono · roda em edge)
-// Rotas públicas e autenticadas. Endpoints implementados nos Sprints.
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { handle } from 'hono/vercel';
 import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { certificateRequests, recipients, workspaces } from '@/db/schema';
@@ -26,9 +24,7 @@ app.get('/', (c) =>
   }),
 );
 
-// ----------------------------------------
 // POST /api/v1/requests — fila de solicitação (form Fluent)
-// ----------------------------------------
 const requestSchema = z.object({
   workspace_slug: z.string().min(1),
   source: z.enum(['form', 'webhook', 'manual', 'csv']).default('form'),
@@ -42,8 +38,23 @@ const requestSchema = z.object({
   lgpd_consent: z.string().optional(),
 });
 
-app.post('/requests', zValidator('form', requestSchema), async (c) => {
-  const data = c.req.valid('form');
+app.post('/requests', async (c) => {
+  let raw: any;
+  const ct = c.req.header('content-type') ?? '';
+  try {
+    if (ct.includes('application/json')) {
+      raw = await c.req.json();
+    } else {
+      const fd = await c.req.formData();
+      raw = Object.fromEntries(fd.entries());
+    }
+  } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+
+  const parsed = requestSchema.safeParse(raw);
+  if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
+  const data = parsed.data;
   const db = getDb();
 
   const [ws] = await db
@@ -81,15 +92,10 @@ app.post('/requests', zValidator('form', requestSchema), async (c) => {
     })
     .returning();
 
-  // TODO Sprint 3: enviar email/WhatsApp "solicitação recebida, em análise (48h SLA)"
   return c.json({ ok: true, request_id: request.id, status: request.status }, 201);
 });
 
-// ----------------------------------------
-// GET /api/v1/credentials/:id/pdf — download PDF (presigned R2)
-// ----------------------------------------
 app.get('/credentials/:id/pdf', async (c) => {
-  // TODO Sprint 2: implementar presigned R2 URL e redirect
   return c.json({ error: 'not_implemented_yet', sprint: 2 }, 501);
 });
 
