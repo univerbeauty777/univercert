@@ -37,7 +37,8 @@ id = "155def9a0c5249bca41686d25e4f7208"
 # Browser Rendering — para gerar PDFs dos certificados
 # Habilitar no dashboard Cloudflare (Workers > Browser Rendering)
 # ----------------------------------------
-browser = { binding = "BROWSER" }
+[browser]
+binding = "BROWSER"
 
 # ----------------------------------------
 # Variáveis de ambiente públicas

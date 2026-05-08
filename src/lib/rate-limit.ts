@@ -20,8 +20,8 @@ type RateLimitResult = {
 export async function rateLimit({ key, max, windowSec }: RateLimitOpts): Promise<RateLimitResult> {
   let kv: KVNamespace | undefined;
   try {
-    const env = (getRequestContext().env as unknown) as { KV?: KVNamespace };
-    kv = env?.KV;
+    const env = (getRequestContext().env as unknown) as { CACHE?: KVNamespace };
+    kv = env?.CACHE;
   } catch {
     // Fora do contexto Cloudflare (build/dev) — bypass
   }
