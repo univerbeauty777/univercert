@@ -1,6 +1,6 @@
 {
   "name": "univercert",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "UniverCert · plataforma brasileira de certificados digitais",
   "scripts": {
@@ -19,6 +19,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "better-auth": "^1.1.0",
     "drizzle-orm": "^0.36.0",
     "hono": "^4.6.0",
     "next": "15.0.3",

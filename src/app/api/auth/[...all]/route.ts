@@ -1,12 +1,13 @@
-// UniverCert · auth handler (placeholder Sprint 0)
-// Sprint 1: implementar com Better Auth.
+// UniverCert · Better Auth handler (rotas /api/auth/*)
+
+import { getAuth } from '@/lib/auth';
 
 export const runtime = 'edge';
 
-export async function GET() {
-  return Response.json({ error: 'auth_not_implemented_yet', sprint: 1 }, { status: 501 });
+async function handler(request: Request) {
+  const auth = getAuth();
+  return auth.handler(request);
 }
 
-export async function POST() {
-  return Response.json({ error: 'auth_not_implemented_yet', sprint: 1 }, { status: 501 });
-}
+export const GET = handler;
+export const POST = handler;

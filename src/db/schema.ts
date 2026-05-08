@@ -1,6 +1,4 @@
-// UniverCert · Drizzle schema (espelha D1 univercert-mvp)
-// Fonte de verdade: ./drizzle/migrations/0000_init.sql
-// Multi-tenant: TODA tabela operacional tem workspace_id NOT NULL
+// UniverCert · Drizzle schema · espelha D1 univercert-mvp
 
 import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
@@ -17,7 +15,7 @@ export const workspaces = sqliteTable('workspaces', {
   updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
 });
 
-// 2. USERS (global)
+// 2. USERS
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -101,7 +99,7 @@ export const recipients = sqliteTable(
   }),
 );
 
-// 7. CERTIFICATE REQUESTS (fila Fluent)
+// 7. CERTIFICATE REQUESTS
 export const certificateRequests = sqliteTable(
   'certificate_requests',
   {
@@ -124,7 +122,7 @@ export const certificateRequests = sqliteTable(
   }),
 );
 
-// 8. CREDENTIALS (id vira parte da URL /v/{id})
+// 8. CREDENTIALS
 export const credentials = sqliteTable(
   'credentials',
   {
@@ -280,14 +278,54 @@ export const sessions = sqliteTable(
   }),
 );
 
-// Type exports — use across the app
+// 16. ACCOUNTS (Better Auth · OAuth + credentials)
+export const accounts = sqliteTable(
+  'accounts',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: integer('access_token_expires_at'),
+    refreshTokenExpiresAt: integer('refresh_token_expires_at'),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    userIdx: index('idx_accounts_user').on(t.userId),
+    providerAccountIdx: uniqueIndex('idx_accounts_provider_account').on(t.providerId, t.accountId),
+  }),
+);
+
+// 17. VERIFICATIONS (Better Auth · email confirm, password reset)
+export const verifications = sqliteTable(
+  'verifications',
+  {
+    id: text('id').primaryKey(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    identifierIdx: index('idx_verifications_identifier').on(t.identifier),
+  }),
+);
+
+// Type exports
 export type Workspace = typeof workspaces.$inferSelect;
-export type NewWorkspace = typeof workspaces.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
 export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type Recipient = typeof recipients.$inferSelect;
 export type CertificateRequest = typeof certificateRequests.$inferSelect;
 export type Credential = typeof credentials.$inferSelect;
 export type Integration = typeof integrations.$inferSelect;
+export type Account = typeof accounts.$inferSelect;
+export type Verification = typeof verifications.$inferSelect;

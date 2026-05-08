@@ -1,13 +1,14 @@
 'use client';
 
-// UniverCert · sign-in com email + senha (Sprint 3)
+// UniverCert · sign-up (Sprint 3)
 
 import { useState } from 'react';
-import { signIn } from '@/lib/auth-client';
+import { signUp } from '@/lib/auth-client';
 
 export const runtime = 'edge';
 
-export default function SignInPage() {
+export default function SignUpPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +19,14 @@ export default function SignInPage() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await signIn.email({
+      const { error } = await signUp.email({
         email,
         password,
+        name,
         callbackURL: '/dashboard',
       });
       if (error) {
-        setError(error.message ?? 'Email ou senha incorretos');
+        setError(error.message ?? 'Erro ao criar conta');
         setLoading(false);
       } else {
         window.location.href = '/dashboard';
@@ -35,22 +37,12 @@ export default function SignInPage() {
     }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    try {
-      await signIn.social({ provider: 'google', callbackURL: '/dashboard' });
-    } catch {
-      setError('Google sign-in não disponível ainda');
-      setLoading(false);
-    }
-  };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-soft to-white px-4">
       <div className="card max-w-md w-full">
-        <h1 className="text-2xl font-extrabold mb-2">Entrar</h1>
+        <h1 className="text-2xl font-extrabold mb-2">Criar conta</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Univer<span className="text-primary font-semibold">Cert</span> · sua plataforma de certificados
+          Comece grátis · 50 certificados/mês · sem cartão
         </p>
 
         {error && (
@@ -60,6 +52,18 @@ export default function SignInPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label" htmlFor="name">Nome</label>
+            <input
+              id="name"
+              type="text"
+              className="input"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
           <div>
             <label className="label" htmlFor="email">Email</label>
             <input
@@ -73,7 +77,7 @@ export default function SignInPage() {
             />
           </div>
           <div>
-            <label className="label" htmlFor="password">Senha</label>
+            <label className="label" htmlFor="password">Senha (mín. 8 caracteres)</label>
             <input
               id="password"
               type="password"
@@ -86,22 +90,14 @@ export default function SignInPage() {
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Criando...' : 'Criar conta'}
           </button>
         </form>
 
-        <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
-          <div className="flex-1 h-px bg-gray-200" /> ou <div className="flex-1 h-px bg-gray-200" />
-        </div>
-
-        <button onClick={handleGoogle} disabled={loading} className="btn-secondary w-full justify-center">
-          Continuar com Google
-        </button>
-
         <p className="text-xs text-center text-gray-500 mt-6">
-          Não tem conta?{' '}
-          <a href="/sign-up" className="text-primary font-semibold hover:underline">
-            Criar conta
+          Já tem conta?{' '}
+          <a href="/sign-in" className="text-primary font-semibold hover:underline">
+            Entrar
           </a>
         </p>
       </div>
