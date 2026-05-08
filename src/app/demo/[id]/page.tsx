@@ -1,10 +1,11 @@
-// UniverCert · Demo result · Sprint 11 GODMODE
+// UniverCert · Demo result · Sprint 12 (logo navy/gold)
 
 import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces } from '@/db/schema';
 import DemoConfetti from './DemoConfetti';
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -46,8 +47,11 @@ export default async function DemoResultPage({ params }: Params) {
 
       <nav className="relative z-10 max-w-5xl mx-auto py-5 px-5 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
-          <span className="font-extrabold tracking-tight text-base">Univer<span className="text-primary">Cert</span></span>
+          <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
+          <span className="font-extrabold tracking-tight text-base">
+            <span className="text-primary">univer</span>
+            <span className="text-accent">CERT</span>
+          </span>
         </a>
         <a href="/demo" className="text-xs md:text-sm text-ink-700 hover:text-primary transition flex items-center gap-1 font-medium">← Testar de novo</a>
       </nav>

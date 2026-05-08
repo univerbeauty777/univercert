@@ -14,12 +14,27 @@ export default function AppleIcon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-          color: 'white',
-          fontSize: '110px',
+          background: '#1B2D5E',
+          borderRadius: '40px',
+          position: 'relative',
         }}
       >
-        🏆
+        <div style={{ position: 'absolute', inset: 22, border: '5px solid #D4A937', borderRadius: '50%', opacity: 0.5 }} />
+        <div style={{ position: 'absolute', inset: 38, border: '5px solid #D4A937', borderRadius: '50%', opacity: 0.7 }} />
+        <div style={{ position: 'absolute', inset: 54, border: '4px solid #D4A937', borderRadius: '50%', opacity: 0.9 }} />
+        <div
+          style={{
+            color: '#D4A937',
+            fontSize: 80,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2,
+          }}
+        >
+          ✓
+        </div>
       </div>
     ),
     { ...size },

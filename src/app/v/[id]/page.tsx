@@ -1,4 +1,4 @@
-// UniverCert · Verify page · Sprint 11 GODMODE
+// UniverCert · Verify page · Sprint 12 (logo navy/gold)
 
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -6,6 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces, brandKits, verifyLogs } from '@/db/schema';
 import { ID } from '@/lib/ulid';
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -74,8 +75,8 @@ export default async function VerifyPage({ params }: Params) {
       : { label: 'Verificado', icon: '✓', cls: 'bg-gradient-to-r from-success to-emerald-600' };
 
   const linkedinUrl = buildLinkedInUrl(credential, workspace?.name ?? 'UniverCert');
-  const primary = brand?.primaryColor ?? '#6366F1';
-  const accent = brand?.secondaryColor ?? '#EC4899';
+  const primary = brand?.primaryColor ?? '#1B2D5E';
+  const accent = brand?.secondaryColor ?? '#D4A937';
   const verifyUrl = `https://univercert.com.br/v/${credential.id}`;
   const issuedDate = new Date(credential.issuedAt * 1000).toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -104,10 +105,7 @@ export default async function VerifyPage({ params }: Params) {
       <div className="relative max-w-3xl mx-auto px-4 pt-8 pb-16">
         <header className="flex items-center justify-between mb-7 animate-fade-in">
           <a href="/" className="flex items-center gap-2.5 group">
-            <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform"
-              style={{ background: `linear-gradient(135deg, ${primary}, ${accent})` }}
-            >🏆</div>
+            <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
             <div>
               <div className="font-extrabold tracking-tight text-[15px] leading-none">{workspace?.name ?? 'UniverCert'}</div>
               <div className="text-[10px] text-ink-500 uppercase tracking-wider font-bold mt-0.5">Certificação Digital</div>

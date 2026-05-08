@@ -14,42 +14,49 @@ export default async function Image() {
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+          background: 'linear-gradient(135deg, #0F1B3E 0%, #1B2D5E 50%, #2A4080 100%)',
           padding: '80px',
           color: 'white',
           fontFamily: 'system-ui, sans-serif',
           position: 'relative',
         }}
       >
+        {/* Gold accent blob */}
         <div
           style={{
             position: 'absolute',
-            top: '-200px',
-            right: '-200px',
+            top: '-100px',
+            right: '-100px',
             width: '500px',
             height: '500px',
             borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)',
-            filter: 'blur(40px)',
+            background: 'rgba(212,169,55,0.20)',
+            filter: 'blur(60px)',
           }}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '40px' }}>
           <div
             style={{
-              width: '70px',
-              height: '70px',
+              width: '80px',
+              height: '80px',
               borderRadius: '20px',
-              background: 'rgba(255,255,255,0.95)',
+              background: '#0F1B3E',
+              border: '4px solid #D4A937',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '40px',
+              color: '#D4A937',
+              fontSize: '44px',
+              fontWeight: 900,
             }}
           >
-            🏆
+            ✓
           </div>
-          <div style={{ fontSize: '38px', fontWeight: 800, letterSpacing: '-0.02em' }}>UniverCert</div>
+          <div style={{ display: 'flex', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 44, fontWeight: 900, letterSpacing: '-0.02em', color: 'white' }}>univer</span>
+            <span style={{ fontSize: 44, fontWeight: 900, letterSpacing: '-0.02em', color: '#D4A937' }}>CERT</span>
+          </div>
         </div>
 
         <div
@@ -69,15 +76,16 @@ export default async function Image() {
         <div
           style={{
             fontSize: '28px',
-            opacity: 0.9,
+            opacity: 0.85,
             marginTop: 'auto',
             display: 'flex',
             gap: '24px',
+            color: '#D4A937',
           }}
         >
           <span>🇧🇷 Pix · Boleto · WhatsApp</span>
-          <span>·</span>
-          <span>univercert.com.br</span>
+          <span style={{ color: 'white', opacity: 0.5 }}>·</span>
+          <span style={{ color: 'white' }}>univercert.com.br</span>
         </div>
       </div>
     ),

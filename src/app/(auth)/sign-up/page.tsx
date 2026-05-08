@@ -1,9 +1,10 @@
 'use client';
 
-// UniverCert · sign-up · Sprint 11 GODMODE
+// UniverCert · sign-up · Sprint 12 (logo navy/gold)
 
 import { useState } from 'react';
 import { signUp } from '@/lib/auth-client';
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -40,8 +41,11 @@ export default function SignUpPage() {
 
       <div className="card-glass w-full max-w-md relative animate-scale-in shadow-card-lift p-8">
         <a href="/" className="inline-flex items-center gap-2.5 mb-7 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
-          <span className="font-extrabold tracking-tight text-base">Univer<span className="text-primary">Cert</span></span>
+          <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
+          <span className="font-extrabold tracking-tight text-base">
+            <span className="text-primary">univer</span>
+            <span className="text-accent">CERT</span>
+          </span>
         </a>
 
         <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight mb-2">Criar conta grátis</h1>

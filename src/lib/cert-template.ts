@@ -45,8 +45,8 @@ export function renderCertificateHtml(args: Args): string {
 function renderClassic(args: Args): string {
   const cpfFormatted = formatCpf(args.cpf);
   const dateFormatted = formatDate(args.issuedAt);
-  const primary = args.primaryColor ?? '#6366F1';
-  const accent = args.accentColor ?? '#EC4899';
+  const primary = args.primaryColor ?? '#1B2D5E';
+  const accent = args.accentColor ?? '#D4A937';
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&format=png&margin=2&data=${encodeURIComponent(args.verifyUrl)}`;
   const hashShort = args.hashSha256 ? args.hashSha256.slice(0, 16) + '…' + args.hashSha256.slice(-8) : '';
 
@@ -73,7 +73,8 @@ body { font-family: 'Inter', sans-serif; background: #FFFEF7; color: #0A0E1A; po
 .content { position: absolute; inset: 11mm; padding: 18mm 22mm 16mm 22mm; display: flex; flex-direction: column; text-align: center; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14mm; }
 .org-block { display: flex; align-items: center; gap: 3mm; }
-.org-icon { width: 12mm; height: 12mm; background: linear-gradient(135deg, ${primary}, ${accent}); border-radius: 3mm; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 7mm; font-weight: 700; box-shadow: 0 2mm 4mm ${primary}40; }
+.org-icon { width: 14mm; height: 14mm; background: ${primary}; border-radius: 3mm; display: flex; align-items: center; justify-content: center; box-shadow: 0 2mm 4mm ${primary}40; position: relative; }
+.org-icon svg { width: 100%; height: 100%; }
 .org-name { font-weight: 800; font-size: 11pt; color: ${primary}; letter-spacing: 0.06em; text-transform: uppercase; text-align: left; }
 .org-tagline { font-size: 7.5pt; color: #6B7280; font-weight: 500; margin-top: 1mm; letter-spacing: 0.02em; }
 .verified-seal { display: inline-flex; align-items: center; gap: 2mm; padding: 2.5mm 5mm;
@@ -110,7 +111,7 @@ body { font-family: 'Inter', sans-serif; background: #FFFEF7; color: #0A0E1A; po
 <div class="content">
 <div class="header">
   <div class="org-block">
-    <div class="org-icon">🏆</div>
+    <div class="org-icon"><svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><path d="M50 4 C50 4, 18 10, 12 14 L12 52 C12 76, 28 96, 50 106 C72 96, 88 76, 88 52 L88 14 C82 10, 50 4, 50 4 Z" fill="${primary}"/><circle cx="50" cy="56" r="32" fill="none" stroke="${accent}" stroke-width="2.5" opacity="0.55"/><circle cx="50" cy="56" r="24" fill="none" stroke="${accent}" stroke-width="2.5" opacity="0.75"/><circle cx="50" cy="56" r="14" fill="${primary}"/><path d="M42 56 L48 62 L60 50" stroke="${accent}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
     <div>
       <div class="org-name">${escapeHtml(args.workspaceName)}</div>
       <div class="org-tagline">Certificação Digital · Verificável 24/7</div>
@@ -149,8 +150,8 @@ body { font-family: 'Inter', sans-serif; background: #FFFEF7; color: #0A0E1A; po
 function renderModern(args: Args): string {
   const cpfFormatted = formatCpf(args.cpf);
   const dateFormatted = formatDate(args.issuedAt);
-  const primary = args.primaryColor ?? '#6366F1';
-  const accent = args.accentColor ?? '#EC4899';
+  const primary = args.primaryColor ?? '#1B2D5E';
+  const accent = args.accentColor ?? '#D4A937';
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&format=png&margin=2&data=${encodeURIComponent(args.verifyUrl)}`;
 
   return `<!DOCTYPE html>

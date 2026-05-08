@@ -1,6 +1,7 @@
 // UniverCert · legal pages shell
 
 import Footer from '@/components/Footer';
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -10,11 +11,10 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/30">
-              🏆
-            </div>
+            <Logo size={36} />
             <span className="font-extrabold text-lg">
-              Univer<span className="text-primary">Cert</span>
+              <span className="text-primary">univer</span>
+              <span className="text-accent">CERT</span>
             </span>
           </a>
           <a href="/" className="text-sm text-gray-600 hover:text-primary">← Voltar</a>

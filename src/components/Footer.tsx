@@ -1,4 +1,6 @@
-// UniverCert · Footer completo (LGPD/CNPJ-ready)
+// UniverCert · Footer (logo navy/gold)
+
+import Logo from './Logo';
 
 export default function Footer() {
   return (
@@ -7,12 +9,11 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
           {/* Brand */}
           <div className="col-span-2">
-            <a href="/" className="flex items-center gap-2 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/30">
-                🏆
-              </div>
+            <a href="/" className="flex items-center gap-2.5 mb-3">
+              <Logo size={36} variant="mark-light" />
               <span className="font-extrabold text-white text-lg">
-                Univer<span className="text-primary">Cert</span>
+                <span className="text-white">univer</span>
+                <span className="text-accent">CERT</span>
               </span>
             </a>
             <p className="text-xs leading-relaxed max-w-xs">

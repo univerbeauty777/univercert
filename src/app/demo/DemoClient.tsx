@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Logo from '@/components/Logo';
 
 type Step = 'nome' | 'curso' | 'loading';
 
@@ -59,8 +60,11 @@ export default function DemoClient() {
 
       <nav className="relative z-10 max-w-5xl mx-auto py-5 px-5 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
-          <span className="font-extrabold tracking-tight text-base">Univer<span className="text-primary">Cert</span></span>
+          <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
+          <span className="font-extrabold tracking-tight text-base">
+            <span className="text-primary">univer</span>
+            <span className="text-accent">CERT</span>
+          </span>
         </a>
         <a href="/sign-up" className="text-xs md:text-sm text-ink-700 hover:text-primary px-4 py-2 rounded-lg hover:bg-white/60 transition font-medium">
           Já quero criar conta →
@@ -127,7 +131,9 @@ export default function DemoClient() {
         {step === 'loading' && (
           <div className="animate-fade-in text-center pt-4 md:pt-12">
             <div className="relative inline-block mb-9">
-              <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-6xl shadow-glow-primary animate-pulse-glow">🏆</div>
+              <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-glow-primary animate-pulse-glow p-3">
+                <Logo size={88} className="text-white" />
+              </div>
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary to-accent opacity-30 blur-xl animate-pulse" />
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight mb-3">Gerando seu certificado...</h2>

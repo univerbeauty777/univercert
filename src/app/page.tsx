@@ -1,6 +1,7 @@
-// UniverCert · landing comercial · Sprint 11 GODMODE
+// UniverCert · landing · Sprint 12 (logo + paleta navy/gold)
 
 import Footer from '@/components/Footer';
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -10,8 +11,11 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-white/75 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
-            <span className="font-extrabold text-base tracking-tight">Univer<span className="text-primary">Cert</span></span>
+            <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
+            <span className="font-extrabold text-base tracking-tight">
+              <span className="text-primary">univer</span>
+              <span className="text-accent">CERT</span>
+            </span>
           </a>
           <nav className="hidden md:flex gap-7 text-sm font-medium text-ink-700">
             <a href="/demo" className="hover:text-primary transition">Demo</a>
@@ -80,7 +84,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
               <div key={f.title} className="card-hover animate-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-accent text-white text-xl flex items-center justify-center mb-4 shadow-glow-primary">{f.emoji}</div>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent text-white text-xl flex items-center justify-center mb-4 shadow-glow-primary">{f.emoji}</div>
                 <h3 className="font-bold text-lg mb-1.5 tracking-tight">{f.title}</h3>
                 <p className="text-sm text-ink-500 leading-relaxed">{f.desc}</p>
               </div>
@@ -143,7 +147,7 @@ export default function HomePage() {
             {STEPS.map((s, i) => (
               <div key={i} className="text-center group">
                 <div className="relative inline-block mb-5">
-                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary via-violet-500 to-accent text-white text-xl font-extrabold flex items-center justify-center shadow-glow-primary group-hover:scale-105 transition-transform">{i + 1}</div>
+                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary to-accent text-white text-xl font-extrabold flex items-center justify-center shadow-glow-primary group-hover:scale-105 transition-transform">{i + 1}</div>
                 </div>
                 <h3 className="font-bold mb-1.5 tracking-tight">{s.title}</h3>
                 <p className="text-sm text-ink-500 leading-relaxed">{s.desc}</p>
@@ -165,7 +169,7 @@ export default function HomePage() {
               <div key={t.name} className={`relative flex flex-col rounded-2xl p-6 transition-all animate-slide-up ${
                 t.popular ? 'bg-white border-2 border-primary -translate-y-2 shadow-card-lift' : 'bg-white border border-gray-200 hover:border-primary/30 shadow-card'
               }`} style={{ animationDelay: `${i * 60}ms` }}>
-                {t.popular && <div className="text-[10px] font-bold text-white uppercase tracking-widest bg-gradient-to-r from-primary via-violet-500 to-accent text-center py-1 -mt-9 mb-4 rounded-full mx-auto px-3 shadow-glow-primary w-fit">Mais popular</div>}
+                {t.popular && <div className="text-[10px] font-bold text-white uppercase tracking-widest bg-gradient-to-r from-primary to-accent text-center py-1 -mt-9 mb-4 rounded-full mx-auto px-3 shadow-glow-primary w-fit">Mais popular</div>}
                 <div className="text-[10px] font-bold text-ink-500 uppercase tracking-widest">{t.name}</div>
                 <div className="text-3xl font-extrabold mt-2 tracking-tight">{t.price}<span className="text-sm text-ink-500 font-medium">{t.period}</span></div>
                 <p className="text-xs text-ink-500 mt-1 mb-5">{t.tagline}</p>

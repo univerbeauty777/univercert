@@ -1,4 +1,6 @@
-// UniverCert · dashboard shell · Sprint 11 GODMODE
+// UniverCert · dashboard shell
+
+import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
 
@@ -9,8 +11,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-7">
             <a href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-white font-bold text-sm shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
-              <span className="font-extrabold tracking-tight">Univer<span className="text-primary">Cert</span></span>
+              <Logo size={36} className="group-hover:scale-105 transition-transform" />
+              <span className="font-extrabold tracking-tight">
+                <span className="text-primary">univer</span>
+                <span className="text-accent">CERT</span>
+              </span>
             </a>
             <nav className="hidden lg:flex gap-0.5 text-sm font-semibold text-ink-500">
               <NavLink href="/dashboard">Visão geral</NavLink>
