@@ -1,82 +1,81 @@
-// UniverCert · fila de aprovação (Sprint 1 — aprovação real funcional)
+// UniverCert · fila de aprovação avançada (Sprint 8)
 
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { certificateRequests, recipients } from '@/db/schema';
-import QueueRow from './QueueRow';
+import QueueClient from './QueueClient';
 
 export const runtime = 'edge';
-export const dynamic = 'force-dynamic'; // sempre fresco — fila muda direto
+export const dynamic = 'force-dynamic';
 
-export default async function QueuePage() {
+type Params = {
+  searchParams: Promise<{ status?: string; q?: string; source?: string }>;
+};
+
+export default async function QueuePage({ searchParams }: Params) {
+  const sp = await searchParams;
+  const status = (sp.status as 'pending' | 'approved' | 'rejected' | 'emitted' | 'all') ?? 'pending';
+  const search = sp.q ?? '';
+  const sourceFilter = sp.source ?? 'all';
+
   const db = getDb();
-  const workspaceId = 'ws_univerhair'; // TODO Sprint 1.5: pegar do session
+  const workspaceId = 'ws_univerhair';
 
-  const pending = await db
+  const conditions = [eq(certificateRequests.workspaceId, workspaceId)];
+  if (status !== 'all') conditions.push(eq(certificateRequests.status, status));
+  if (sourceFilter !== 'all') {
+    conditions.push(eq(certificateRequests.source, sourceFilter as any));
+  }
+
+  const list = await db
     .select({
       request: certificateRequests,
       recipient: recipients,
     })
     .from(certificateRequests)
     .leftJoin(recipients, eq(certificateRequests.recipientId, recipients.id))
-    .where(and(eq(certificateRequests.workspaceId, workspaceId), eq(certificateRequests.status, 'pending')))
+    .where(and(...conditions))
     .orderBy(desc(certificateRequests.createdAt))
-    .limit(50);
+    .limit(200);
+
+  // Filter por search no client
+  const filtered = search
+    ? list.filter(
+        ({ request, recipient }) =>
+          recipient?.name?.toLowerCase().includes(search.toLowerCase()) ||
+          recipient?.email?.toLowerCase().includes(search.toLowerCase()) ||
+          request.courseName?.toLowerCase().includes(search.toLowerCase()),
+      )
+    : list;
+
+  // Counts por status
+  const counts = await db
+    .select({ status: certificateRequests.status, count: sql<number>`count(*)` })
+    .from(certificateRequests)
+    .where(eq(certificateRequests.workspaceId, workspaceId))
+    .groupBy(certificateRequests.status);
+
+  const countByStatus: Record<string, number> = {};
+  counts.forEach((c) => (countByStatus[c.status] = c.count));
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold">Fila de aprovação</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {pending.length} solicitação{pending.length !== 1 ? 'ões' : ''} aguardando
-            </p>
-          </div>
-        </div>
-
-        {pending.length === 0 ? (
-          <div className="card text-center py-16">
-            <div className="text-5xl mb-4">📭</div>
-            <p className="text-lg font-semibold">Nenhuma solicitação pendente</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Quando alunos completarem cursos no Fluent Community ou enviarem o form, vão aparecer aqui.
-            </p>
-          </div>
-        ) : (
-          <div className="card overflow-hidden p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Aluno</th>
-                  <th className="px-4 py-3 text-left">Curso</th>
-                  <th className="px-4 py-3 text-left">Origem</th>
-                  <th className="px-4 py-3 text-left">Solicitado</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.map(({ request, recipient }) => (
-                  <QueueRow
-                    key={request.id}
-                    request={{
-                      id: request.id,
-                      courseName: request.courseName,
-                      source: request.source,
-                      createdAt: request.createdAt,
-                    }}
-                    recipient={recipient}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <p className="text-xs text-gray-400 mt-4">
-          Sprint 1 ✓ aprovação cria credential com hash SHA-256 · Sprint 1.5 implementa render PDF + email/WhatsApp.
-        </p>
-      </div>
-    </main>
+    <QueueClient
+      requests={filtered.map(({ request, recipient }) => ({
+        id: request.id,
+        courseName: request.courseName,
+        courseHours: request.courseHours,
+        source: request.source,
+        status: request.status,
+        rejectionReason: request.rejectionReason,
+        createdAt: request.createdAt,
+        recipientName: recipient?.name ?? null,
+        recipientEmail: recipient?.email ?? null,
+        recipientCpf: recipient?.cpf ?? null,
+      }))}
+      currentStatus={status}
+      currentSource={sourceFilter}
+      currentSearch={search}
+      counts={countByStatus}
+    />
   );
 }

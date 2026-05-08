@@ -1,28 +1,18 @@
 #!/bin/bash
-# Sprint 5 + 6 + 7 — MP billing + Custom domain + Open Badges 3.0
+# Sprint 8 — Typeform-style form + queue avançada + verify premium + NPS cron + Reseller program
 set -e
 git pull --rebase --autostash
 git add -A
-git commit -m "feat(sprint5-7): Mercado Pago + Custom domain (CF for SaaS) + Open Badges 3.0 JSON-LD + nav completa"
+git commit -m "feat(sprint8): redesign Typeform-style + queue avançada com bulk/filtros + verify premium + NPS automation + Reseller program + sign-in premium"
 git push
 echo
 echo "✓ Build vai rodar em ~3min."
 echo
-echo "Plataforma agora completa pra rodar HOJE:"
-echo "  /              → landing comercial"
-echo "  /sign-in       → email+senha + Google OAuth ✓"
-echo "  /dashboard     → analytics"
-echo "  /queue         → fila aprovação"
-echo "  /credentials   → certificados emitidos"
-echo "  /recipients    → alunos"
-echo "  /bulk          → CSV emit em massa"
-echo "  /templates     → templates"
-echo "  /integrations  → webhooks Hotmart/Memberkit/Fluent/Kiwify/Eduzz"
-echo "  /billing       → Mercado Pago checkout (Pix/Boleto/Cartão até 12x)"
-echo "  /domain        → Custom domain wizard (Cloudflare for SaaS)"
-echo "  /audit         → audit log"
-echo "  /api/v1/credentials/:id/openbadge.json → Open Badges 3.0 JSON-LD"
-echo
-echo "Pra ativar tudo: configure secrets faltando:"
-echo "  RESEND_API_KEY, MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET,"
-echo "  META_WHATSAPP_TOKEN, META_WHATSAPP_PHONE_ID, CLOUDFLARE_ZONE_ID"
+echo "Após verde, novidades:"
+echo "  /uh/solicitar       → Form Typeform-style fullscreen multi-step com animations + Enter keyboard"
+echo "  /queue              → Fila com tabs (pendente/emitido/rejeitado), busca, filtro por origem, bulk approve"
+echo "  /v/{id}             → Verify page premium com gradients, brand colors do tenant"
+echo "  /sign-in            → Login premium com Google OAuth · animations · backdrop blur"
+echo "  /reseller           → Programa de parceiros UniverCert Partners"
+echo "  /api/cron/nps       → Cron handler NPS D+7 (configurar Cloudflare cron pra rodar 1x/dia)"
+echo "  Open Badge button   → Verify page tem botão pra Open Badge JSON-LD"
