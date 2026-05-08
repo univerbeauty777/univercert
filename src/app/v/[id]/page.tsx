@@ -1,5 +1,5 @@
 // UniverCert · verify page pública /v/{id}
-// Validação 1-click do certificado. Acessível sem login.
+// Sprint 1.5: download PDF on-demand via /api/v1/credentials/:id/pdf
 
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -78,6 +78,8 @@ export default async function VerifyPage({ params }: Params) {
     ? { color: 'bg-warning', text: 'Expirado', icon: '⚠' }
     : { color: 'bg-success', text: 'Verificado', icon: '✓' };
 
+  const linkedinUrl = buildLinkedInUrl(credential, workspace?.name ?? 'UniverCert');
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -107,18 +109,18 @@ export default async function VerifyPage({ params }: Params) {
           <p className="text-xl font-bold text-primary mb-6">{credential.courseName}</p>
 
           <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-100 pt-4">
-            {credential.courseHours && (
+            {credential.courseHours ? (
               <div>
                 <div className="text-gray-400 text-xs uppercase tracking-wider">Carga horária</div>
                 <div className="font-semibold">{credential.courseHours}h</div>
               </div>
-            )}
-            {recipient?.cpf && (
+            ) : null}
+            {recipient?.cpf ? (
               <div>
                 <div className="text-gray-400 text-xs uppercase tracking-wider">CPF</div>
                 <div className="font-semibold">{recipient.cpf}</div>
               </div>
-            )}
+            ) : null}
             <div>
               <div className="text-gray-400 text-xs uppercase tracking-wider">Emitido em</div>
               <div className="font-semibold">
@@ -131,19 +133,25 @@ export default async function VerifyPage({ params }: Params) {
             </div>
           </div>
 
-          {credential.pdfR2Key && (
+          {!isRevoked && (
             <div className="mt-6 flex gap-3 flex-wrap">
-              <a href={`/api/v1/credentials/${credential.id}/pdf`} className="btn-primary">
-                ⬇ Baixar PDF
-              </a>
               <a
-                href={buildLinkedInUrl(credential, recipient?.name)}
+                href={`/api/v1/credentials/${credential.id}/pdf`}
+                className="btn-primary"
                 target="_blank"
                 rel="noopener"
-                className="btn-secondary"
               >
+                ⬇ Baixar PDF
+              </a>
+              <a href={linkedinUrl} target="_blank" rel="noopener" className="btn-secondary">
                 Adicionar ao LinkedIn
               </a>
+            </div>
+          )}
+
+          {isRevoked && credential.revokeReason && (
+            <div className="mt-6 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <strong>Revogado:</strong> {credential.revokeReason}
             </div>
           )}
         </div>
@@ -156,12 +164,15 @@ export default async function VerifyPage({ params }: Params) {
   );
 }
 
-function buildLinkedInUrl(cred: { courseName: string; issuedAt: number; id: string }, name?: string | null) {
+function buildLinkedInUrl(
+  cred: { courseName: string; issuedAt: number; id: string },
+  organizationName: string,
+) {
   const issuedAt = new Date(cred.issuedAt * 1000);
   const params = new URLSearchParams({
     startTask: 'CERTIFICATION_NAME',
     name: cred.courseName,
-    organizationName: 'UniverHair',
+    organizationName,
     issueYear: String(issuedAt.getFullYear()),
     issueMonth: String(issuedAt.getMonth() + 1),
     certUrl: `https://univercert.com.br/v/${cred.id}`,

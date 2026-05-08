@@ -19,7 +19,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <nav className="hidden md:flex gap-6 text-sm font-semibold text-gray-600">
               <a href="/dashboard" className="hover:text-primary">Dashboard</a>
               <a href="/queue" className="hover:text-primary">Fila</a>
+              <a href="/bulk" className="hover:text-primary">Bulk emit</a>
               <a href="/templates" className="hover:text-primary">Templates</a>
+              <a href="/integrations" className="hover:text-primary">Integrações</a>
             </nav>
           </div>
           <div className="text-xs text-gray-500">UniverHair (workspace)</div>
