@@ -1,5 +1,4 @@
 // UniverCert · API v1 (Hono · catch-all em /api/v1/*)
-// Fix do 404 anterior — Hono basePath('/api/v1') agora captura todas as sub-paths.
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -14,6 +13,7 @@ import { issueCredentialFromRequest, rejectRequest } from '@/lib/credentials';
 import { renderCertificateHtml } from '@/lib/cert-template';
 import { renderPdfFromHtml } from '@/lib/render-pdf';
 import { notifyRecipient } from '@/lib/notify';
+import { buildOpenBadge } from '@/lib/openbadge';
 
 export const runtime = 'edge';
 
@@ -21,20 +21,17 @@ const app = new Hono().basePath('/api/v1');
 
 app.use('*', cors());
 
-// ----------------------------------------
-// healthcheck
-// ----------------------------------------
 app.get('/', (c) =>
   c.json({
     name: 'UniverCert API',
-    version: '0.2.0',
+    version: '0.5.0',
     docs: 'https://developer.univercert.com.br',
-    sprints_completed: ['S0', 'S1'],
+    sprints_completed: ['S0', 'S1', 'S1.5', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'],
   }),
 );
 
 // ----------------------------------------
-// POST /api/v1/requests — fila de solicitação (form Fluent + webhooks)
+// POST /api/v1/requests
 // ----------------------------------------
 const requestSchema = z.object({
   workspace_slug: z.string().min(1),
@@ -71,11 +68,7 @@ app.post('/requests', async (c) => {
   const data = parsed.data;
   const db = getDb();
 
-  const [ws] = await db
-    .select()
-    .from(workspaces)
-    .where(eq(workspaces.slug, data.workspace_slug))
-    .limit(1);
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, data.workspace_slug)).limit(1);
   if (!ws) return c.json({ error: 'workspace_not_found' }, 404);
 
   const cpf = cleanCPF(data.cpf);
@@ -107,8 +100,6 @@ app.post('/requests', async (c) => {
     })
     .returning();
 
-  // Form post: redireciona pra página de confirmação.
-  // JSON post: retorna JSON.
   if (ct.includes('application/json')) {
     return c.json({ ok: true, request_id: request.id, status: request.status }, 201);
   }
@@ -116,13 +107,12 @@ app.post('/requests', async (c) => {
 });
 
 // ----------------------------------------
-// POST /api/v1/requests/:id/approve — emite credential
+// POST /api/v1/requests/:id/approve
 // ----------------------------------------
 app.post('/requests/:id/approve', async (c) => {
   const id = c.req.param('id');
   try {
     const result = await issueCredentialFromRequest(id, null);
-    // notify async (não bloqueia)
     if (!result.alreadyEmitted) {
       c.executionCtx.waitUntil?.(notifyRecipient(result.credential.id).catch(() => {}));
     }
@@ -132,9 +122,6 @@ app.post('/requests/:id/approve', async (c) => {
   }
 });
 
-// ----------------------------------------
-// POST /api/v1/requests/:id/reject
-// ----------------------------------------
 app.post('/requests/:id/reject', async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json().catch(() => ({}));
@@ -148,7 +135,7 @@ app.post('/requests/:id/reject', async (c) => {
 });
 
 // ----------------------------------------
-// GET /api/v1/credentials/:id/pdf — render & retorna PDF
+// GET /api/v1/credentials/:id/pdf
 // ----------------------------------------
 app.get('/credentials/:id/pdf', async (c) => {
   const id = c.req.param('id');
@@ -184,8 +171,7 @@ app.get('/credentials/:id/pdf', async (c) => {
         'cache-control': 'public, max-age=3600',
       },
     });
-  } catch (e) {
-    // Fallback: retorna HTML pra browser renderizar (sem precisar de Browser Rendering API)
+  } catch {
     return new Response(html, {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
@@ -193,7 +179,44 @@ app.get('/credentials/:id/pdf', async (c) => {
 });
 
 // ----------------------------------------
-// POST /api/v1/credentials/:id/notify — envia email + WhatsApp
+// GET /api/v1/credentials/:id/openbadge.json — Open Badges 3.0 JSON-LD
+// ----------------------------------------
+app.get('/credentials/:id/openbadge.json', async (c) => {
+  const id = c.req.param('id');
+  const db = getDb();
+  const [row] = await db
+    .select({ credential: credentials, recipient: recipients, workspace: workspaces })
+    .from(credentials)
+    .leftJoin(recipients, eq(credentials.recipientId, recipients.id))
+    .leftJoin(workspaces, eq(credentials.workspaceId, workspaces.id))
+    .where(eq(credentials.id, id))
+    .limit(1);
+
+  if (!row || !row.credential) return c.json({ error: 'not_found' }, 404);
+
+  const badge = buildOpenBadge({
+    credentialId: row.credential.id,
+    hashSha256: row.credential.hashSha256,
+    recipientName: row.recipient?.name ?? '',
+    recipientEmail: row.recipient?.email ?? null,
+    cpf: row.recipient?.cpf ?? null,
+    courseName: row.credential.courseName,
+    courseHours: row.credential.courseHours,
+    issuedAt: row.credential.issuedAt,
+    expiresAt: row.credential.expiresAt,
+    workspaceName: row.workspace?.name ?? 'UniverCert',
+    workspaceUrl: 'https://univercert.com.br',
+    verifyUrl: `https://univercert.com.br/v/${row.credential.id}`,
+  });
+
+  return c.json(badge, 200, {
+    'content-type': 'application/ld+json',
+    'cache-control': 'public, max-age=3600',
+  });
+});
+
+// ----------------------------------------
+// POST /api/v1/credentials/:id/notify
 // ----------------------------------------
 app.post('/credentials/:id/notify', async (c) => {
   const id = c.req.param('id');
