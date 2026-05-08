@@ -53,6 +53,7 @@ export default async function VerifyPage({ params }: Params) {
   const { credential, recipient, workspace, brand } = data;
   const isRevoked = credential.revokedAt !== null;
   const isExpired = credential.expiresAt && credential.expiresAt < Math.floor(Date.now() / 1000);
+  const isDemo = workspace?.slug === 'demo';
 
   if (!isRevoked) {
     const h = await headers();
@@ -87,6 +88,23 @@ export default async function VerifyPage({ params }: Params) {
       />
 
       <div className="max-w-2xl mx-auto relative animate-slide-up">
+        {/* DEMO banner */}
+        {isDemo && (
+          <div className="mb-5 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl text-sm flex items-start gap-3 shadow-sm">
+            <span className="text-2xl">🧪</span>
+            <div className="flex-1">
+              <div className="font-bold text-amber-900 mb-0.5">Este é um certificado de demonstração</div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Foi gerado pela página <code className="bg-amber-100 px-1 rounded">univercert.com.br/demo</code> apenas
+                para você ver como o certificado funciona. Não tem validade legal.
+              </p>
+              <a href="/sign-up" className="inline-block mt-2 text-xs font-bold text-primary hover:underline">
+                Criar conta grátis e emitir certificados reais →
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <a href="/" className="flex items-center gap-2 hover:opacity-80 transition">

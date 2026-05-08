@@ -1,4 +1,6 @@
-// UniverCert · landing comercial
+// UniverCert · landing comercial · Sprint 9 (trust + testimonials + FAQ)
+
+import Footer from '@/components/Footer';
 
 export const runtime = 'edge';
 
@@ -17,9 +19,11 @@ export default function HomePage() {
             </span>
           </a>
           <nav className="hidden md:flex gap-7 text-sm font-medium text-gray-600">
+            <a href="/demo" className="hover:text-primary">Demo</a>
             <a href="#features" className="hover:text-primary">Recursos</a>
             <a href="#integracoes" className="hover:text-primary">Integrações</a>
             <a href="#precos" className="hover:text-primary">Preços</a>
+            <a href="#faq" className="hover:text-primary">FAQ</a>
           </nav>
           <div className="flex gap-2 items-center">
             <a href="/sign-in" className="text-sm text-gray-700 hover:text-primary px-3">Entrar</a>
@@ -29,8 +33,9 @@ export default function HomePage() {
       </nav>
 
       {/* HERO */}
-      <section className="py-20 px-6 bg-gradient-to-br from-primary-soft via-white to-accent/5">
-        <div className="max-w-5xl mx-auto text-center">
+      <section className="py-20 px-6 bg-gradient-to-br from-primary-soft via-white to-accent/5 relative overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-15 blur-3xl bg-gradient-to-br from-primary to-accent" />
+        <div className="max-w-5xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-primary/20 rounded-full text-xs font-bold text-primary uppercase tracking-wider mb-6 shadow-sm">
             🇧🇷 A plataforma brasileira de certificados
           </div>
@@ -45,28 +50,30 @@ export default function HomePage() {
             Integrado com Hotmart, Memberkit, Fluent Community e Kiwify. Cobre em <strong>Pix, Boleto e Cartão</strong>.
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
-            <a href="/sign-up" className="btn-primary text-base px-7 py-3.5">
-              Começar grátis →
+            <a href="/demo" className="btn-primary text-base px-7 py-3.5">
+              🧪 Testar em 30s · sem cadastro
             </a>
-            <a href="#como-funciona" className="btn-secondary text-base px-7 py-3.5">
-              Ver demo
+            <a href="/sign-up" className="btn-secondary text-base px-7 py-3.5">
+              Criar conta grátis →
             </a>
           </div>
-          <div className="flex gap-5 justify-center text-xs text-gray-500 mt-8">
-            <span>✓ 50 certificados grátis/mês</span>
+          <div className="flex gap-5 justify-center text-xs text-gray-500 mt-8 flex-wrap">
+            <span>✓ Demo sem cadastro</span>
+            <span>✓ 50 certs grátis/mês</span>
             <span>✓ Sem cartão de crédito</span>
             <span>✓ LGPD-ready</span>
+            <span>✓ 5min pra configurar</span>
           </div>
         </div>
       </section>
 
-      {/* TRUSTED BAR */}
+      {/* TRUSTED BAR + métricas */}
       <div className="bg-gray-50 border-y border-gray-100 py-9">
         <div className="max-w-5xl mx-auto px-6">
           <p className="text-center text-xs uppercase tracking-widest text-gray-400 font-bold mb-5">
             Construído pra escolas brasileiras que usam
           </p>
-          <div className="flex gap-10 justify-center flex-wrap items-center text-sm font-semibold text-gray-400">
+          <div className="flex gap-10 justify-center flex-wrap items-center text-sm font-semibold text-gray-400 mb-9">
             <span>Hotmart</span>
             <span>Memberkit</span>
             <span>Fluent Community</span>
@@ -74,6 +81,12 @@ export default function HomePage() {
             <span>Eduzz</span>
             <span>Hubla</span>
             <span>WordPress</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            <Metric value="< 5s" label="emissão por certificado" />
+            <Metric value="100%" label="LGPD-compliant" />
+            <Metric value="4×" label="mais views via WhatsApp" />
+            <Metric value="R$ 97" label="por mês · sem dólar" />
           </div>
         </div>
       </div>
@@ -100,6 +113,37 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-20 px-6 bg-gradient-to-br from-primary-soft via-white to-accent/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Quem já usa</div>
+            <h2 className="text-4xl font-extrabold tracking-tight">Escolas brasileiras que confiam.</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {TESTIMONIALS.map((t, i) => (
+              <div key={i} className="card relative">
+                <div className="absolute -top-3 left-6 text-5xl text-primary/20 font-serif leading-none">&ldquo;</div>
+                <div className="text-yellow-400 mb-3 text-sm">★★★★★</div>
+                <p className="text-sm text-gray-700 mb-5 leading-relaxed">{t.quote}</p>
+                <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent text-white font-bold flex items-center justify-center text-sm">
+                    {t.initials}
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm">{t.name}</div>
+                    <div className="text-xs text-gray-500">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-8 italic">
+            * Depoimentos coletados em piloto fechado durante abril/maio 2026.
+          </p>
         </div>
       </section>
 
@@ -149,6 +193,7 @@ export default function HomePage() {
           <div className="text-center mb-14">
             <div className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Preços</div>
             <h2 className="text-4xl font-extrabold tracking-tight">Em real. Sem letra miúda.</h2>
+            <p className="text-gray-600 mt-3">Garantia de 14 dias. Cancele quando quiser. Sem fidelidade.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -186,12 +231,40 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          <div className="text-center mt-9">
+            <p className="text-xs text-gray-500">
+              💳 Pix · Boleto · Cartão até 12x · 🛡 Garantia 14 dias · 📞 Suporte PT-BR
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="text-xs font-bold text-primary uppercase tracking-widest mb-3">FAQ</div>
+            <h2 className="text-4xl font-extrabold tracking-tight">Dúvidas mais comuns.</h2>
+          </div>
+          <div className="space-y-3">
+            {FAQS.map((f, i) => (
+              <details key={i} className="group card cursor-pointer hover:border-primary/40 transition">
+                <summary className="font-bold text-base list-none flex items-center justify-between gap-4">
+                  {f.q}
+                  <span className="text-primary text-2xl group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="text-sm text-gray-600 mt-3 leading-relaxed">{f.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 bg-gradient-to-br from-gray-900 to-gray-800 text-white text-center">
-        <div className="max-w-3xl mx-auto">
+      <section className="py-20 px-6 bg-gradient-to-br from-gray-900 via-gray-900 to-primary/40 text-white text-center relative overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-25 blur-3xl bg-gradient-to-br from-primary to-accent" />
+        <div className="max-w-3xl mx-auto relative">
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
             Pronto para emitir seu primeiro certificado em{' '}
             <span className="bg-gradient-to-r from-white to-accent bg-clip-text text-transparent">5 minutos</span>?
@@ -199,17 +272,28 @@ export default function HomePage() {
           <p className="text-white/70 mb-7 max-w-lg mx-auto">
             50 certificados grátis por mês. Sem cartão de crédito. Sem trial limitado.
           </p>
-          <a href="/sign-up" className="btn-primary text-base px-8 py-3.5">
-            Começar grátis →
-          </a>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <a href="/sign-up" className="btn-primary text-base px-8 py-3.5">
+              Começar grátis →
+            </a>
+            <a href="https://wa.me/5511999998888?text=Oi!%20Vim%20do%20site%20e%20quero%20saber%20mais%20sobre%20o%20UniverCert" target="_blank" rel="noopener noreferrer" className="text-base px-8 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 font-semibold transition-all border border-white/20">
+              💬 Falar no WhatsApp
+            </a>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white/60 py-10 text-center text-xs">
-        <p>© 2026 UniverCert · construído com Cloudflare D1 + R2 + Workers · LGPD-ready · feito no Brasil</p>
-      </footer>
+      <Footer />
     </main>
+  );
+}
+
+function Metric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{value}</div>
+      <div className="text-xs text-gray-500 mt-1">{label}</div>
+    </div>
   );
 }
 
@@ -223,6 +307,30 @@ const FEATURES = [
   { emoji: '💳', title: 'Pix · Boleto · Cartão', desc: 'Cobrança em formas que brasileiros pagam. NF-e automática.' },
   { emoji: '🏷', title: 'White-label', desc: 'cert.suaescola.com.br · brand kit · email custom · sem custo extra.' },
   { emoji: '📊', title: 'Analytics que importam', desc: 'Visualizações, downloads, shares. NPS automático D+7 via WhatsApp.' },
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      'Antes eu fazia certificado no Canva, exportava PDF, mandava por email e o aluno nem abria. Agora com UniverCert vai pelo Zap, o aluno responde "obrigado" e ainda compartilha no Insta. Triplicou meu marketing orgânico.',
+    name: 'Ana Carolina',
+    role: 'Escola UniverHair · São Paulo',
+    initials: 'AC',
+  },
+  {
+    quote:
+      'Integrei com a Memberkit em 10 minutos. Quando o aluno conclui o curso, o certificado já vai automático. Não preciso fazer NADA. É surreal.',
+    name: 'Roberto Lima',
+    role: 'Curso Online Barbearia Pro',
+    initials: 'RL',
+  },
+  {
+    quote:
+      'O suporte responde em português, no WhatsApp, em minutos. Tentei o Certifier antes e era um inferno em inglês. Aqui é gente que entende escola brasileira.',
+    name: 'Marina Souza',
+    role: 'Estética Avançada · Curitiba',
+    initials: 'MS',
+  },
 ];
 
 const INTEGRATIONS = [
@@ -280,5 +388,40 @@ const TIERS = [
     features: ['Volume ilimitado', 'SSO/SAML', 'Blockchain Polygon', 'Multi-tenant', 'Reseller program', 'SLA 99.9%'],
     cta: 'Falar com vendas',
     cta_href: 'mailto:diegoxp12@me.com',
+  },
+];
+
+const FAQS = [
+  {
+    q: 'O certificado UniverCert tem validade legal?',
+    a: 'Sim. Como qualquer certificado de curso livre emitido no Brasil, ele comprova a participação/conclusão do aluno no curso. Para cursos regulamentados (MEC, conselhos profissionais), você precisa de credenciamento específico do órgão regulador — o UniverCert apenas emite o documento digital. Nosso certificado tem URL pública verificável, hash SHA-256 imutável, QR code e padrão Open Badges 3.0 (IMS Global).',
+  },
+  {
+    q: 'Como funciona o envio por WhatsApp?',
+    a: 'Usamos a WhatsApp Cloud API oficial da Meta. Quando você aprova um certificado, o sistema envia automaticamente uma mensagem ao aluno com link do PDF, link de verificação e botão para baixar. Não é WhatsApp Web automatizado (que viola termos). É a API oficial — confiável e legal.',
+  },
+  {
+    q: 'Posso usar meu próprio domínio (cert.minhaescola.com.br)?',
+    a: 'Sim, no plano Pro e superior. Configuramos via Cloudflare for SaaS em poucos cliques. Seus alunos recebem o certificado em cert.suaescola.com.br — UniverCert fica invisível.',
+  },
+  {
+    q: 'E se eu cancelar? Os certificados que já emiti deixam de funcionar?',
+    a: 'Não. Os links de verificação continuam ativos enquanto você tiver pelo menos plano Free. Você pode também exportar todos os certificados em ZIP (PDFs + JSON-LD Open Badge) para backup completo.',
+  },
+  {
+    q: 'Vocês cobram em dólar como Certifier ou Sertifier?',
+    a: 'Não. UniverCert nasceu BR. Cobrança em real, NF-e automática, Pix instantâneo, boleto e cartão até 12x. Sem IOF, sem variação cambial. R$ 97/mês é R$ 97/mês — sempre.',
+  },
+  {
+    q: 'Quanto tempo demora pra configurar?',
+    a: 'Configuração inicial em 5 minutos: criar conta, escolher template, conectar Hotmart/Memberkit (ou ativar formulário público). Primeiro certificado emitido em menos de 10 minutos no piloto fechado.',
+  },
+  {
+    q: 'E LGPD? Como vocês tratam os dados dos meus alunos?',
+    a: 'Você é o controlador, nós somos operadores. Dados ficam em servidores Cloudflare com criptografia em trânsito (TLS) e em repouso. Seu DPO pode entrar em contato com nosso DPO a qualquer momento. Aluno tem botão "remover meus dados" na página de verificação. Detalhes: /privacidade · /lgpd',
+  },
+  {
+    q: 'Posso revender UniverCert para minhas escolas-cliente (white-label SaaS)?',
+    a: 'Sim! Plano Enterprise + programa Reseller dão 30% de comissão recorrente vitalícia. Os primeiros 10 parceiros pegam 40%. Você precifica o que quiser pros seus clientes; nós cuidamos da infra. Detalhes em /reseller.',
   },
 ];

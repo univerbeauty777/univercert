@@ -9,11 +9,12 @@ import { getDb } from '@/db/client';
 import { certificateRequests, recipients, workspaces, credentials } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { isValidCPF, cleanCPF } from '@/lib/cpf';
-import { issueCredentialFromRequest, rejectRequest } from '@/lib/credentials';
+import { issueCredentialFromRequest, rejectRequest, computeCertHash } from '@/lib/credentials';
 import { renderCertificateHtml } from '@/lib/cert-template';
 import { renderPdfFromHtml } from '@/lib/render-pdf';
 import { notifyRecipient } from '@/lib/notify';
 import { buildOpenBadge } from '@/lib/openbadge';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 
@@ -48,6 +49,13 @@ const requestSchema = z.object({
 });
 
 app.post('/requests', async (c) => {
+  // Rate limit: 5 solicitações por 60s por IP
+  const ip = getClientIp(c.req.raw);
+  const rl = await rateLimit({ key: `requests:${ip}`, max: 5, windowSec: 60 });
+  if (!rl.ok) {
+    return c.json({ error: 'rate_limited', retry_at: rl.resetAt }, 429);
+  }
+
   let raw: any;
   const ct = c.req.header('content-type') ?? '';
   try {
@@ -213,6 +221,98 @@ app.get('/credentials/:id/openbadge.json', async (c) => {
     'content-type': 'application/ld+json',
     'cache-control': 'public, max-age=3600',
   });
+});
+
+// ----------------------------------------
+// POST /api/v1/demo/issue — Sprint 10 · Demo pública sem auth
+// ----------------------------------------
+const demoSchema = z.object({
+  nome: z.string().min(2).max(80),
+  curso: z.string().min(2).max(120),
+});
+
+app.post('/demo/issue', async (c) => {
+  // Rate limit agressivo: 3 demos por IP por hora
+  const ip = getClientIp(c.req.raw);
+  const rl = await rateLimit({ key: `demo:${ip}`, max: 3, windowSec: 3600 });
+  if (!rl.ok) {
+    return c.json(
+      { error: 'rate_limited', message: 'Você já testou 3 vezes na última hora. Volte mais tarde ou crie sua conta gratuita.', retry_at: rl.resetAt },
+      429,
+    );
+  }
+
+  let raw: any;
+  try {
+    raw = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+
+  const parsed = demoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
+  }
+  const data = parsed.data;
+  const db = getDb();
+
+  // Workspace 'demo' deve estar provisionado pela migration 0004
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, 'demo')).limit(1);
+  if (!ws) return c.json({ error: 'demo_workspace_not_provisioned' }, 500);
+
+  // Cria recipient demo (sem CPF, sem email, sem WA)
+  const [recipient] = await db
+    .insert(recipients)
+    .values({
+      id: ID.recipient(),
+      workspaceId: ws.id,
+      name: data.nome.trim(),
+      cpf: null,
+      email: null,
+      phoneWhatsapp: null,
+      metadataJson: JSON.stringify({ demo: true, ip }),
+    })
+    .returning();
+
+  // Pula o request — emite credential direto
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const credId = ID.credential();
+  const hash = await computeCertHash({
+    workspaceId: ws.id,
+    recipientId: recipient.id,
+    recipientName: recipient.name,
+    cpf: null,
+    courseName: data.curso.trim(),
+    courseHours: null,
+    issuedAt,
+  });
+
+  const [cred] = await db
+    .insert(credentials)
+    .values({
+      id: credId,
+      workspaceId: ws.id,
+      recipientId: recipient.id,
+      hashSha256: hash,
+      courseName: data.curso.trim(),
+      courseHours: null,
+      issuedAt,
+      // expira em 90 dias — UX melhor que sumir, mas evita lixo eterno
+      expiresAt: issuedAt + 90 * 24 * 3600,
+      metadataJson: JSON.stringify({ demo: true }),
+    })
+    .returning();
+
+  return c.json(
+    {
+      ok: true,
+      credential_id: cred.id,
+      verify_url: `/v/${cred.id}`,
+      demo_result_url: `/demo/${cred.id}`,
+      issued_at: issuedAt,
+    },
+    201,
+  );
 });
 
 // ----------------------------------------
