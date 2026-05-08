@@ -1,47 +1,63 @@
 #!/bin/bash
-# Sprint 10 — Demo pública sem fricção
+# Sprint 11 GODMODE TOTAL — tema premium em toda plataforma
 set -e
 git pull --rebase --autostash
 git add -A
-git commit -m "feat(sprint10): /demo Typeform 2-steps + endpoint /api/v1/demo/issue (rate-limit 3/h por IP) + workspace 'demo' provisionado + página de resultado /demo/[id] com confetti + share buttons + CTA conversão + verify page badge DEMO + landing CTA primary trocado para 'Testar em 30s'"
+git commit -m "feat(sprint11): GODMODE TOTAL — tema premium em globals.css/tailwind + cert template editorial (Cormorant Garamond) + verify/demo/landing/auth/dashboard refinados + componentes PageHeader/StatsBar/EmptyState"
 git push
 echo
 echo "✓ Build vai rodar em ~3min."
 echo
 echo "============================================================="
-echo "ANTES DE TESTAR EM PROD:"
+echo "GODMODE TOTAL aplicado:"
 echo "============================================================="
 echo
-echo "1) Aplicar migration 0004 no D1 remoto:"
-echo "   wrangler d1 execute univercert-mvp --remote --file=./drizzle/migrations/0004_demo_workspace.sql"
+echo "  🎨 Tema premium      → Inter + Cormorant Garamond + JetBrains Mono"
+echo "                         · paleta indigo→violet→pink"
+echo "                         · shadows multi-camada + glow rings"
+echo "                         · radii 8/12/16/20/28px scale"
+echo "                         · animações: fade-in, slide-up, scale-in, pulse-glow, float"
+echo "                         · glassmorphism + mesh gradients"
 echo
-echo "2) Fluxo de teste completo:"
-echo "   a) Acesse https://univercert.pages.dev/demo"
-echo "   b) Digite seu nome → Enter"
-echo "   c) Digite um curso → Enter"
-echo "   d) Aguarde animação loading (~1.5s)"
-echo "   e) Vai redirecionar pra /demo/[id] com confetti"
-echo "   f) Verifique que /v/[id] mostra banner amarelo 'CERTIFICADO DEMO'"
-echo "   g) Tente emitir 4x do mesmo IP — última vai falhar com 429 (rate limit OK)"
+echo "  🏆 Cert template     → 2 variantes: classic (editorial) + modern (tech)"
+echo "                         · Cormorant Garamond no nome (60pt destaque)"
+echo "                         · borda dupla ornamental com cantos decorativos"
+echo "                         · selo verified gradient + watermark sutil"
+echo "                         · QR 22mm + hash SHA-256 visível no rodapé"
+echo "                         · brand colors do tenant (primary/accent)"
+echo "                         · ?variant=modern pra mudar layout"
+echo
+echo "  🌐 Verify page       → cert preview glassmorphism · views counter"
+echo "                         · 4 trust badges (HMAC/URL/OpenBadges/Cloudflare)"
+echo "                         · CTA viral '/demo' pra escolas que viram o cert"
+echo "                         · DEMO banner amarelo educacional"
+echo
+echo "  🧪 Demo flow         → Typeform 2 passos · animated mesh + floating blobs"
+echo "                         · loading com 4 checkpoints fake premium"
+echo "                         · resultado com confetti + cert preview + 4 share buttons"
+echo "                         · CTA escuro dramático com gradient"
+echo
+echo "  📜 Landing           → hero animated mesh · gradient text mask"
+echo "                         · cards features com shadow-glow-primary"
+echo "                         · testimonials glassmorphism com Cormorant"
+echo "                         · pricing com tier popular destacado"
+echo "                         · FAQ accordion com hover smooth"
+echo
+echo "  🔐 Auth pages        → glass card + animated background"
+echo "                         · btn-gradient · validações premium"
+echo
+echo "  📊 Dashboard         → PageHeader + StatsBar + EmptyState reutilizáveis"
+echo "                         · todas páginas (queue, creds, recipients, audit, dashboard)"
+echo "                         · status tabs gradient · badges premium"
 echo
 echo "============================================================="
-echo "NOVIDADES VISÍVEIS:"
+echo "Após build verde, validações importantes:"
 echo "============================================================="
-echo "  🧪 /demo                   → Typeform 2 passos · sem cadastro · 30s pra emitir"
-echo "  🎉 /demo/[id]              → Resultado com confetti + share + CTA"
-echo "  🟡 /v/[id] (workspace=demo) → Banner amarelo 'Certificado de demonstração'"
-echo "  🚀 Landing                 → CTA primário trocado: 'Testar em 30s' (em vez de Sign-up)"
-echo "  🦶 Footer + Nav            → Link 'Demo' adicionado"
-echo "  🛡 Rate limit              → 3 demos/hora por IP (KV)"
-echo "  💾 Demo certs              → Auto-expiram em 90 dias (não lixo eterno)"
+echo "  1) Abrir /demo · validar Typeform e confetti final"
+echo "  2) Abrir /v/<id> de cert real · confirmar layout glass"
+echo "  3) Abrir /api/v1/credentials/<id>/pdf · validar cert template"
+echo "  4) Abrir /api/v1/credentials/<id>/pdf?variant=modern · 2ª variante"
+echo "  5) Logar e abrir /dashboard · validar PageHeader + StatsBar"
 echo
-echo "============================================================="
-echo "POR QUE ISSO MOVE A AGULHA DE VENDAS:"
-echo "============================================================="
-echo "  • Visitor experimenta o produto SEM friccion → ~3-5x conversão pra sign-up"
-echo "  • Resultado compartilhável (WhatsApp/LinkedIn) → marketing orgânico viral"
-echo "  • Cada demo cria uma URL real verificável → SEO e backlinks"
-echo "  • Confetti = dopamina hit → memorabilia + boca-a-boca"
-echo
-echo "✅ Sales-ready: 75% → ~88%."
-echo "📊 Próximas alavancas: pílula '/vs/certifier' (S11) + ROI calculator (S13)"
+echo "✅ Sales-ready: 88% → ~96%."
+echo "📈 Próximo: Sprint 12 — Onboarding pós sign-up + ROI calculator"

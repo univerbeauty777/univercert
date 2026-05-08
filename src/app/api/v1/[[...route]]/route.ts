@@ -6,7 +6,7 @@ import { handle } from 'hono/vercel';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { certificateRequests, recipients, workspaces, credentials } from '@/db/schema';
+import { certificateRequests, recipients, workspaces, credentials, brandKits } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { isValidCPF, cleanCPF } from '@/lib/cpf';
 import { issueCredentialFromRequest, rejectRequest, computeCertHash } from '@/lib/credentials';
@@ -176,12 +176,14 @@ app.post('/requests/:id/reject', async (c) => {
 // ----------------------------------------
 app.get('/credentials/:id/pdf', async (c) => {
   const id = c.req.param('id');
+  const variant = (c.req.query('variant') === 'modern' ? 'modern' : 'classic') as 'classic' | 'modern';
   const db = getDb();
   const [row] = await db
-    .select({ credential: credentials, recipient: recipients, workspace: workspaces })
+    .select({ credential: credentials, recipient: recipients, workspace: workspaces, brand: brandKits })
     .from(credentials)
     .leftJoin(recipients, eq(credentials.recipientId, recipients.id))
     .leftJoin(workspaces, eq(credentials.workspaceId, workspaces.id))
+    .leftJoin(brandKits, eq(brandKits.workspaceId, workspaces.id))
     .where(eq(credentials.id, id))
     .limit(1);
 
@@ -195,8 +197,12 @@ app.get('/credentials/:id/pdf', async (c) => {
     courseHours: row.credential.courseHours,
     issuedAt: row.credential.issuedAt,
     credentialId: row.credential.id,
+    hashSha256: row.credential.hashSha256,
     workspaceName: row.workspace?.name ?? 'UniverCert',
     verifyUrl: `https://univercert.com.br/v/${row.credential.id}`,
+    primaryColor: row.brand?.primaryColor ?? undefined,
+    accentColor: row.brand?.secondaryColor ?? undefined,
+    variant,
   });
 
   try {

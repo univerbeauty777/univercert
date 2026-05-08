@@ -1,6 +1,6 @@
 'use client';
 
-// UniverCert · sign-in premium
+// UniverCert · sign-in · Sprint 11 GODMODE
 
 import { useState } from 'react';
 import { signIn } from '@/lib/auth-client';
@@ -18,11 +18,7 @@ export default function SignInPage() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await signIn.email({
-        email,
-        password,
-        callbackURL: '/dashboard',
-      });
+      const { error } = await signIn.email({ email, password, callbackURL: '/dashboard' });
       if (error) {
         setError(error.message ?? 'Email ou senha incorretos');
         setLoading(false);
@@ -46,34 +42,25 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-soft via-white to-accent/10 px-4 relative overflow-hidden">
-      <div className="fixed -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl bg-gradient-to-br from-primary to-accent" />
-      <div className="fixed -bottom-40 -left-40 w-[500px] h-[500px] rounded-full opacity-15 blur-3xl bg-gradient-to-br from-accent to-primary" />
+    <main className="min-h-screen bg-mesh flex items-center justify-center px-4 relative overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary-soft/40 via-white to-accent/10" />
+      <div className="fixed -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-30 blur-3xl bg-gradient-to-br from-primary to-accent animate-float" />
+      <div className="fixed -bottom-40 -left-40 w-[400px] h-[400px] rounded-full opacity-20 blur-3xl bg-gradient-to-br from-violet-500 to-primary animate-float" style={{ animationDelay: '2s' }} />
 
-      <div className="card max-w-md w-full relative animate-scale-in shadow-2xl shadow-primary/10">
-        <a href="/" className="inline-flex items-center gap-2 mb-6 hover:opacity-80 transition">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-lg shadow-primary/30">
-            🏆
-          </div>
-          <span className="font-extrabold tracking-tight">
-            Univer<span className="text-primary">Cert</span>
-          </span>
+      <div className="card-glass w-full max-w-md relative animate-scale-in shadow-card-lift p-8">
+        <a href="/" className="inline-flex items-center gap-2.5 mb-7 group">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-white font-bold shadow-glow-primary group-hover:scale-105 transition-transform">🏆</div>
+          <span className="font-extrabold tracking-tight text-base">Univer<span className="text-primary">Cert</span></span>
         </a>
 
-        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Bem-vindo de volta</h1>
-        <p className="text-sm text-gray-500 mb-7">Entre para gerenciar seus certificados</p>
+        <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight mb-2">Bem-vindo de volta</h1>
+        <p className="text-sm text-ink-500 mb-7">Entre para gerenciar seus certificados</p>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl animate-slide-up">
-            ⚠ {error}
-          </div>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl animate-slide-up">⚠ {error}</div>
         )}
 
-        <button
-          onClick={handleGoogle}
-          disabled={loading}
-          className="btn-secondary w-full justify-center mb-4 hover:border-gray-400"
-        >
+        <button onClick={handleGoogle} disabled={loading} className="btn-secondary w-full justify-center mb-4">
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -83,54 +70,34 @@ export default function SignInPage() {
           Continuar com Google
         </button>
 
-        <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
-          <div className="flex-1 h-px bg-gray-200" /> ou com email <div className="flex-1 h-px bg-gray-200" />
+        <div className="my-5 flex items-center gap-3 text-xs text-ink-500">
+          <div className="flex-1 h-px bg-gray-200" />
+          ou com email
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label" htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              className="input"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              autoFocus
-            />
+            <input id="email" type="email" className="input" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} autoFocus />
           </div>
           <div>
             <label className="label" htmlFor="password">Senha</label>
-            <input
-              id="password"
-              type="password"
-              className="input"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
+            <input id="password" type="password" className="input" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
+          <button type="submit" disabled={loading} className="btn-gradient w-full justify-center">
             {loading ? (
               <>
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Entrando...
               </>
-            ) : (
-              <>Entrar →</>
-            )}
+            ) : (<>Entrar →</>)}
           </button>
         </form>
 
-        <p className="text-sm text-center text-gray-500 mt-6">
+        <p className="text-sm text-center text-ink-500 mt-7">
           Não tem conta?{' '}
-          <a href="/sign-up" className="text-primary font-semibold hover:underline">
-            Criar grátis
-          </a>
+          <a href="/sign-up" className="text-primary font-bold hover:underline">Criar grátis</a>
         </p>
       </div>
     </main>
