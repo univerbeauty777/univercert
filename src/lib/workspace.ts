@@ -1,18 +1,17 @@
 // UniverCert · multi-tenant safety layer
-// CRÍTICO: TODA query a tabelas operacionais DEVE passar por este helper.
-// Ele força o filtro workspace_id e previne data leak entre tenants.
-//
-// Este é o substituto do Postgres RLS no D1 (que não tem RLS nativo).
-// Use o WorkspaceScopedDB no lugar do db cru sempre que houver dados de tenant.
+// CRÍTICO: TODA query a tabelas operacionais DEVE incluir workspace_id no WHERE.
+// Substitui Postgres RLS — D1 não tem RLS nativo, isolamento é no app.
 
-import { eq, and, type SQL } from 'drizzle-orm';
-import { type DB, getDb } from '@/db/client';
-import { workspaces, workspaceMembers, users } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { workspaces, workspaceMembers } from '@/db/schema';
+
+export type WorkspaceRole = 'admin' | 'editor' | 'aprovador' | 'viewer';
 
 export type WorkspaceContext = {
   workspaceId: string;
   userId: string;
-  role: 'admin' | 'editor' | 'aprovador' | 'viewer';
+  role: WorkspaceRole;
 };
 
 /**
@@ -37,31 +36,14 @@ export async function requireWorkspaceAccess(
   return {
     workspaceId,
     userId,
-    role: member[0].role as WorkspaceContext['role'],
+    role: member[0].role as WorkspaceRole,
   };
-}
-
-/**
- * Filter helper — adds workspace_id constraint to a where clause.
- * Use this in EVERY select/update/delete to operational tables.
- *
- * @example
- *   const rows = await db.select().from(templates).where(scoped(ctx, eq(templates.id, id)));
- */
-export function scoped(ctx: WorkspaceContext, ...conditions: (SQL | undefined)[]): SQL {
-  // @ts-expect-error - dynamic table column access; runtime safe because workspace_id is on every operational table
-  const wsCondition = eq(arguments[1]?.queries?.[0]?.table?.workspace_id, ctx.workspaceId);
-  // Fallback: use the workspaceId condition explicitly via and()
-  return and(...conditions.filter(Boolean)) as SQL;
 }
 
 /**
  * Role guards — throw if user lacks required role.
  */
-export function requireRole(
-  ctx: WorkspaceContext,
-  allowed: Array<WorkspaceContext['role']>,
-): void {
+export function requireRole(ctx: WorkspaceContext, allowed: ReadonlyArray<WorkspaceRole>): void {
   if (!allowed.includes(ctx.role)) {
     throw new Error(`FORBIDDEN: requires one of [${allowed.join(', ')}], got ${ctx.role}`);
   }
