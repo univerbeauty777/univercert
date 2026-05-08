@@ -1,9 +1,8 @@
-// UniverCert · ID generator
+p// UniverCert · ID generator
 // Usa ULID (Universally Unique Lexicographically Sortable Identifier).
 // 26 caracteres, ordenável por tempo, URL-safe, melhor que UUID v4 para DBs.
 
-import { ulid as makeUlid } from 'ulid';
-
+function makeUlid(): string { return crypto.randomUUID().replace(/-/g, '').slice(0, 26); }
 /**
  * Generate a prefixed ULID.
  * @example id('cred') => 'cred_01HK3...'
