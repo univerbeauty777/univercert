@@ -22,14 +22,43 @@ const app = new Hono().basePath('/api/v1');
 
 app.use('*', cors());
 
+// Global error handler — retorna JSON com mensagem em vez de "Internal Server Error" puro
+app.onError((err, c) => {
+  const e = err as Error;
+  console.error('[api error]', e?.message, e?.stack);
+  return c.json(
+    {
+      error: 'internal',
+      message: e?.message ?? String(err),
+      stack: e?.stack?.split('\n').slice(0, 6).join(' | '),
+    },
+    500,
+  );
+});
+
 app.get('/', (c) =>
   c.json({
     name: 'UniverCert API',
-    version: '0.5.0',
+    version: '0.10.1',
     docs: 'https://developer.univercert.com.br',
-    sprints_completed: ['S0', 'S1', 'S1.5', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'],
+    sprints_completed: ['S0', 'S1', 'S1.5', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S9', 'S10'],
   }),
 );
+
+// Diagnóstico — retorna se workspace 'demo' está provisionado (pra debug Sprint 10)
+app.get('/demo/diag', async (c) => {
+  try {
+    const db = getDb();
+    const ws = await db.select().from(workspaces).where(eq(workspaces.slug, 'demo')).limit(1);
+    return c.json({
+      ok: true,
+      workspace_demo_exists: ws.length > 0,
+      workspace: ws[0] ?? null,
+    });
+  } catch (e) {
+    return c.json({ ok: false, error: (e as Error).message, stack: (e as Error).stack }, 500);
+  }
+});
 
 // ----------------------------------------
 // POST /api/v1/requests

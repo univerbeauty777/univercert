@@ -31,17 +31,30 @@ export default function DemoClient() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ nome: nome.trim(), curso: curso.trim() }),
       });
-      const data = await res.json();
+      let data: any = null;
+      const ct = res.headers.get('content-type') ?? '';
+      try {
+        data = ct.includes('application/json') ? await res.json() : { _raw: await res.text() };
+      } catch {
+        data = {};
+      }
       if (!res.ok) {
         setStep('curso');
-        setError(data.message ?? 'Erro ao gerar demo. Tente novamente em instantes.');
+        const reason =
+          data?.message ?? data?.error ?? `HTTP ${res.status}${res.statusText ? ' · ' + res.statusText : ''}`;
+        setError(`Erro: ${reason}`);
+        if (typeof window !== 'undefined') {
+          // facilita debug em DevTools
+          console.error('[demo/issue]', res.status, data);
+        }
         return;
       }
       // Redireciona pra página de resultado
       window.location.href = data.demo_result_url;
-    } catch {
+    } catch (e) {
       setStep('curso');
-      setError('Erro de rede. Tente novamente.');
+      setError(`Erro de rede: ${(e as Error).message ?? 'desconhecido'}`);
+      console.error('[demo/issue] fetch error', e);
     }
   };
 
