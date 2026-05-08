@@ -3,9 +3,13 @@
 # Account: DXPRO Univerbeauty (4a89b58af57b3ffb99858479a75b1e61)
 
 name = "univercert"
-main = "src/index.ts"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Pages: aponta pro output do @cloudflare/next-on-pages.
+# Esse campo é o que faz o `wrangler pages deploy` ler bindings deste arquivo
+# em vez de depender só do Dashboard.
+pages_build_output_dir = ".vercel/output/static"
 
 # ----------------------------------------
 # D1 Database — univercert-mvp (SQLite)
