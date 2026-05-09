@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Logo from './Logo';
 import DarkModeToggle from './DarkModeToggle';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
+
+type WorkspaceInfo = { id: string; slug: string; name: string; role: string };
 
 type NavItem = {
   href: string;
@@ -149,9 +152,13 @@ const COLLAPSE_KEY = 'uc_sidebar_collapsed';
 export default function Sidebar({
   workspaceName = 'UniverCert',
   pendingCount = 0,
+  currentWorkspace,
+  workspaces,
 }: {
   workspaceName?: string;
   pendingCount?: number;
+  currentWorkspace?: WorkspaceInfo;
+  workspaces?: WorkspaceInfo[];
 }) {
   const pathname = usePathname() || '/';
   const [collapsed, setCollapsed] = useState(false);
@@ -204,21 +211,23 @@ export default function Sidebar({
       )}
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
-        {/* Logo + workspace */}
-        <div className="flex items-center gap-2.5 px-4 h-14 border-b border-[rgb(var(--border))] shrink-0">
+        {/* Logo */}
+        <a href="/dashboard" className="flex items-center gap-2.5 px-4 h-14 border-b border-[rgb(var(--border))] shrink-0 hover:bg-[rgb(var(--surface-2))] transition">
           <Logo size={28} />
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1 leading-none">
-                <span className="font-bold text-[15px] text-[rgb(var(--brand))]">univer</span>
-                <span className="font-bold text-[15px] text-[rgb(var(--gold))]">CERT</span>
-              </div>
-              <div className="text-[10px] text-[rgb(var(--fg-subtle))] uppercase tracking-wider mt-0.5 truncate">
-                {workspaceName}
-              </div>
+            <div className="flex items-center gap-1 leading-none">
+              <span className="font-bold text-[15px] text-[rgb(var(--brand))]">univer</span>
+              <span className="font-bold text-[15px] text-[rgb(var(--gold))]">CERT</span>
             </div>
           )}
-        </div>
+        </a>
+
+        {/* Workspace switcher */}
+        {currentWorkspace && workspaces && workspaces.length > 0 && (
+          <div className="px-2 py-2 border-b border-[rgb(var(--border))]">
+            <WorkspaceSwitcher current={currentWorkspace} workspaces={workspaces} collapsed={collapsed} />
+          </div>
+        )}
 
         {/* Sections */}
         <nav className="flex-1 overflow-y-auto py-3 space-y-3">

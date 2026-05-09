@@ -1,12 +1,13 @@
-// UniverCert · RBAC helpers (Sprint 15) — server-only (usa next/headers)
+// UniverCert · RBAC helpers (Sprint 15 / S23) — server-only (usa next/headers)
 // Constantes & tipos client-safe vão em ./rbac-types.ts
 
 import { headers } from 'next/headers';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { workspaceMembers, workspaces, users } from '@/db/schema';
 import { getSession } from '@/lib/auth';
 import { ROLE_LEVEL, hasPermission, type Role } from '@/lib/rbac-types';
+import { getCurrentWorkspaceCookie } from '@/lib/current-workspace';
 
 // Re-exports pra compat (server code segue importando de @/lib/rbac)
 export { ROLE_LABELS, ROLE_DESCRIPTIONS, hasPermission, type Role } from '@/lib/rbac-types';
@@ -29,19 +30,25 @@ export async function getCurrentSession(): Promise<CurrentSession | null> {
     if (!session?.user?.id) return null;
 
     const db = getDb();
-    const [row] = await db
+
+    // 1. Lista TODOS os memberships do user (pra workspace switcher)
+    const memberships = await db
       .select({
-        user: users,
         member: workspaceMembers,
         workspace: workspaces,
       })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
+      .where(eq(workspaceMembers.userId, session.user.id))
+      .orderBy(desc(workspaceMembers.createdAt));
+
+    const [userRow] = await db
+      .select()
       .from(users)
-      .leftJoin(workspaceMembers, eq(workspaceMembers.userId, users.id))
-      .leftJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    if (!row?.user || !row.member || !row.workspace) {
+    if (memberships.length === 0) {
       // Fallback: legacy single-tenant (univerhair) — assume admin
       const [fallbackWs] = await db
         .select()
@@ -51,23 +58,47 @@ export async function getCurrentSession(): Promise<CurrentSession | null> {
       if (!fallbackWs) return null;
       return {
         user: {
-          id: row?.user?.id ?? session.user.id,
-          email: row?.user?.email ?? session.user.email ?? '',
-          name: row?.user?.name ?? null,
+          id: userRow?.id ?? session.user.id,
+          email: userRow?.email ?? session.user.email ?? '',
+          name: userRow?.name ?? null,
         },
         workspace: { id: fallbackWs.id, slug: fallbackWs.slug, name: fallbackWs.name },
         member: { role: 'admin' },
       };
     }
 
+    // 2. Resolve current workspace via cookie 'uc_current_ws' ou primeiro membership
+    const cookieWsId = await getCurrentWorkspaceCookie();
+    let active = memberships.find((m) => m.workspace.id === cookieWsId);
+    if (!active) active = memberships[0];
+
     return {
-      user: { id: row.user.id, email: row.user.email, name: row.user.name },
-      workspace: { id: row.workspace.id, slug: row.workspace.slug, name: row.workspace.name },
-      member: { role: row.member.role as Role },
+      user: { id: userRow?.id ?? session.user.id, email: userRow?.email ?? '', name: userRow?.name ?? null },
+      workspace: { id: active.workspace.id, slug: active.workspace.slug, name: active.workspace.name },
+      member: { role: active.member.role as Role },
     };
   } catch (e) {
     console.error('getCurrentSession failed:', e);
     return null;
+  }
+}
+
+/** Lista todos workspaces do user atual pra UI do switcher */
+export async function listMyWorkspaces(): Promise<Array<{ id: string; slug: string; name: string; role: Role }>> {
+  try {
+    const h = await headers();
+    const session = await getSession(h);
+    if (!session?.user?.id) return [];
+    const db = getDb();
+    const rows = await db
+      .select({ ws: workspaces, m: workspaceMembers })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
+      .where(eq(workspaceMembers.userId, session.user.id))
+      .orderBy(desc(workspaceMembers.createdAt));
+    return rows.map((r) => ({ id: r.ws.id, slug: r.ws.slug, name: r.ws.name, role: r.m.role as Role }));
+  } catch {
+    return [];
   }
 }
 

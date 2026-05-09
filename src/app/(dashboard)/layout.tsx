@@ -1,33 +1,46 @@
-// UniverCert · Dashboard shell GODMODE 2.0 — sidebar fixa colapsável
+// UniverCert · Dashboard shell GODMODE 2.0 — sidebar fixa colapsável + multi-workspace (S23)
 
 import { eq, and, count } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workspaces, certificateRequests } from '@/db/schema';
+import { certificateRequests } from '@/db/schema';
 import Sidebar from '@/components/Sidebar';
+import { getCurrentSession, listMyWorkspaces } from '@/lib/rbac';
 
 export const runtime = 'edge';
 
 async function getShellData() {
   try {
+    const sess = await getCurrentSession();
+    if (!sess) return { workspaceName: 'UniverCert', pendingCount: 0, workspaces: [], current: null };
+
+    const memberships = await listMyWorkspaces();
     const db = getDb();
-    const slug = 'univerhair';
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
-    if (!ws) return { workspaceName: 'UniverCert', pendingCount: 0 };
     const [pending] = await db
       .select({ value: count() })
       .from(certificateRequests)
-      .where(and(eq(certificateRequests.workspaceId, ws.id), eq(certificateRequests.status, 'pending')));
-    return { workspaceName: ws.name, pendingCount: pending?.value ?? 0 };
+      .where(and(eq(certificateRequests.workspaceId, sess.workspace.id), eq(certificateRequests.status, 'pending')));
+
+    return {
+      workspaceName: sess.workspace.name,
+      pendingCount: pending?.value ?? 0,
+      workspaces: memberships,
+      current: { id: sess.workspace.id, slug: sess.workspace.slug, name: sess.workspace.name, role: sess.member.role },
+    };
   } catch {
-    return { workspaceName: 'UniverCert', pendingCount: 0 };
+    return { workspaceName: 'UniverCert', pendingCount: 0, workspaces: [], current: null };
   }
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { workspaceName, pendingCount } = await getShellData();
+  const { workspaceName, pendingCount, workspaces, current } = await getShellData();
   return (
     <div className="min-h-screen bg-[rgb(var(--bg))] text-[rgb(var(--fg))]">
-      <Sidebar workspaceName={workspaceName} pendingCount={pendingCount} />
+      <Sidebar
+        workspaceName={workspaceName}
+        pendingCount={pendingCount}
+        currentWorkspace={current ?? undefined}
+        workspaces={workspaces}
+      />
       <div className="with-sidebar min-h-screen flex flex-col" id="uc-main">
         {children}
       </div>
