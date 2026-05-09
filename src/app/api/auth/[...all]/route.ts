@@ -35,34 +35,40 @@ async function handler(request: Request) {
     }
   }
 
+  // Sprint 19 DEBUG MODE: intercepta console.error pra capturar o que Better Auth loga
+  const captured: any[] = [];
+  const origError = console.error;
+  console.error = (...args: any[]) => {
+    captured.push(args.map((a) => (a instanceof Error ? `${a.name}: ${a.message}\n${a.stack}` : String(a))).join(' '));
+    origError(...args);
+  };
+
   try {
     const auth = getAuth();
     const resp = await auth.handler(request);
-    // Sprint 19 hotfix DEBUG: se Better Auth retornar 500 com body vazio
-    // (o que vem acontecendo), capturamos e expomos info pra debug.
-    // REMOVER esse bloco após consertar o bug do signup.
-    if (resp.status >= 500 && resp.headers.get('content-length') === '0') {
-      const debugInfo = {
-        error: 'better_auth_silent_500',
-        path,
-        method: request.method,
-        status: resp.status,
-        message: 'Better Auth retornou 500 sem body. Veja workers logs.',
-        hint: 'Provavelmente schema mismatch — algum campo NOT NULL faltando ou coluna inexistente',
-      };
-      return Response.json(debugInfo, { status: 500 });
+
+    // Se Better Auth retornou erro semântico (4xx/5xx) E console.error foi chamado,
+    // anexa os logs no body pra debug.
+    if (resp.status >= 400 && captured.length > 0) {
+      const body = await resp.text();
+      let parsed: any;
+      try { parsed = JSON.parse(body); } catch { parsed = { raw: body }; }
+      parsed._debug_captured = captured;
+      return Response.json(parsed, { status: resp.status });
     }
     return resp;
   } catch (e) {
-    console.error('[auth handler error]', (e as Error)?.message, (e as Error)?.stack);
     return Response.json(
       {
         error: 'auth_internal_throw',
         message: (e as Error)?.message,
-        stack: (e as Error)?.stack?.split('\n').slice(0, 8),
+        stack: (e as Error)?.stack?.split('\n').slice(0, 12),
+        captured,
       },
       { status: 500 },
     );
+  } finally {
+    console.error = origError;
   }
 }
 
