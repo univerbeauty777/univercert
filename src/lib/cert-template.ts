@@ -13,7 +13,8 @@ type Args = {
   verifyUrl: string;
   primaryColor?: string;
   accentColor?: string;
-  variant?: 'classic' | 'modern' | 'gold' | 'minimal' | 'executive' | 'creative';
+  variant?: 'classic' | 'modern' | 'gold' | 'minimal' | 'executive' | 'creative' | 'custom';
+  customLayoutJson?: string; // usado quando variant === 'custom'
 };
 
 // Catalogo público de variantes — usado pela galeria /templates
@@ -52,9 +53,104 @@ export function renderCertificateHtml(args: Args): string {
     case 'minimal': return renderMinimal(args);
     case 'executive': return renderExecutive(args);
     case 'creative': return renderCreative(args);
+    case 'custom': return renderCustom(args);
     case 'classic':
     default: return renderClassic(args);
   }
+}
+
+// ============================================================
+// CUSTOM — renderer pra layouts criados no editor visual (Sprint 14)
+// ============================================================
+type CustomElement = {
+  id: string;
+  type: 'text' | 'field' | 'image' | 'shape' | 'qr';
+  x: number; y: number; w: number; h: number;
+  text?: string;
+  field?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number;
+  color?: string;
+  textAlign?: string;
+  italic?: boolean;
+  letterSpacing?: number;
+  fill?: string;
+  borderRadius?: number;
+  imageUrl?: string;
+  zIndex?: number;
+};
+
+type CustomLayout = {
+  v: 1;
+  pageColor: string;
+  width: number;
+  height: number;
+  elements: CustomElement[];
+};
+
+function renderCustom(args: Args): string {
+  if (!args.customLayoutJson) return renderClassic(args); // fallback
+  let layout: CustomLayout;
+  try { layout = JSON.parse(args.customLayoutJson) as CustomLayout; }
+  catch { return renderClassic(args); }
+
+  const fieldValue = (key: string): string => {
+    switch (key) {
+      case 'recipientName': return escapeHtml(args.recipientName);
+      case 'courseName': return escapeHtml(args.courseName);
+      case 'courseHours': return args.courseHours ? `${args.courseHours} horas` : '—';
+      case 'cpf': return formatCpf(args.cpf) ?? '—';
+      case 'issuedAt': return formatDate(args.issuedAt);
+      case 'workspaceName': return escapeHtml(args.workspaceName);
+      case 'verifyUrl': return escapeHtml(args.verifyUrl);
+      case 'credentialId': return escapeHtml(args.credentialId);
+      default: return '';
+    }
+  };
+
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&format=png&margin=2&data=${encodeURIComponent(args.verifyUrl)}`;
+
+  const els = layout.elements
+    .slice()
+    .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+    .map((el) => {
+      const baseStyle = `position:absolute;left:${el.x}mm;top:${el.y}mm;width:${el.w}mm;height:${el.h}mm;z-index:${el.zIndex ?? 1};`;
+      if (el.type === 'text') {
+        const ts = `${baseStyle}font-family:'${el.fontFamily ?? 'Inter'}',sans-serif;font-size:${el.fontSize ?? 12}pt;font-weight:${el.fontWeight ?? 400};color:${el.color ?? '#000'};text-align:${el.textAlign ?? 'left'};${el.italic ? 'font-style:italic;' : ''}letter-spacing:${el.letterSpacing ?? 0}em;line-height:1.1;`;
+        return `<div style="${ts}">${escapeHtml(el.text ?? '')}</div>`;
+      }
+      if (el.type === 'field') {
+        const ts = `${baseStyle}font-family:'${el.fontFamily ?? 'Inter'}',sans-serif;font-size:${el.fontSize ?? 12}pt;font-weight:${el.fontWeight ?? 400};color:${el.color ?? '#000'};text-align:${el.textAlign ?? 'left'};${el.italic ? 'font-style:italic;' : ''}letter-spacing:${el.letterSpacing ?? 0}em;line-height:1.1;`;
+        return `<div style="${ts}">${fieldValue(el.field ?? '')}</div>`;
+      }
+      if (el.type === 'shape') {
+        return `<div style="${baseStyle}background:${el.fill ?? '#000'};border-radius:${el.borderRadius ?? 0}mm;"></div>`;
+      }
+      if (el.type === 'image' && el.imageUrl) {
+        // Whitelist origins seguros
+        const safe = /^https?:\/\/(api\.qrserver\.com|.*\.r2\.cloudflarestorage\.com|.*\.univercert\.com\.br|cdn\.univercert\.com\.br)\//.test(el.imageUrl);
+        if (!safe) return '';
+        return `<img src="${el.imageUrl}" style="${baseStyle}object-fit:contain;" alt="" />`;
+      }
+      if (el.type === 'qr') {
+        return `<img src="${qrSrc}" style="${baseStyle}object-fit:contain;background:#fff;padding:1mm;" alt="QR" />`;
+      }
+      return '';
+    })
+    .join('');
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Certificado · ${escapeHtml(args.recipientName)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: ${layout.width}mm; height: ${layout.height}mm; background: ${layout.pageColor}; position: relative; overflow: hidden; -webkit-font-smoothing: antialiased; }
+</style></head>
+<body>${els}</body></html>`;
 }
 
 // Helper SVG do escudo (reutilizado por todas variantes)

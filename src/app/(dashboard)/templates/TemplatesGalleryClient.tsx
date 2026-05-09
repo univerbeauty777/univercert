@@ -25,13 +25,17 @@ const PRESET_PALETTES = [
   { name: 'Black + White', primary: '#0A0E1A', accent: '#1B2D5E' },
 ];
 
+type CustomTpl = { id: string; name: string; vertical: string };
+
 export default function TemplatesGalleryClient({
   variants,
+  customTemplates = [],
   initialPrimary,
   initialAccent,
   workspaceName,
 }: {
   variants: Variant[];
+  customTemplates?: CustomTpl[];
   initialPrimary: string;
   initialAccent: string;
   workspaceName: string;
@@ -129,7 +133,50 @@ export default function TemplatesGalleryClient({
         )}
       </div>
 
-      {/* Galeria */}
+      {/* Templates customizados (do workspace) */}
+      {customTemplates.length > 0 && (
+        <>
+          <div className="flex items-center justify-between mb-4 mt-2">
+            <h2 className="font-display text-xl font-semibold tracking-tight">✏ Seus templates customizados</h2>
+            <a href="/templates/new" className="btn-secondary text-xs">+ Criar mais</a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10">
+            {customTemplates.map((t, i) => (
+              <article
+                key={t.id}
+                className="card-hover relative overflow-hidden p-0 animate-slide-up !p-0 border-2 border-accent/30"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <div className="absolute top-3 right-3 z-10 px-2.5 py-1 bg-accent text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-md">
+                  Custom
+                </div>
+                <div className="relative aspect-[297/210] bg-gray-100 overflow-hidden">
+                  <iframe
+                    src={`/api/v1/templates/custom/${t.id}/preview`}
+                    title={`Preview ${t.name}`}
+                    className="absolute inset-0 w-[297mm] h-[210mm] origin-top-left pointer-events-none"
+                    style={{ transform: 'scale(0.36)' }}
+                    loading="lazy"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+                <div className="p-5">
+                  <h3 className="font-display text-xl font-semibold tracking-tight">{t.name}</h3>
+                  <p className="text-[11px] uppercase tracking-widest text-ink-500 font-bold mt-0.5">{t.vertical}</p>
+                  <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100">
+                    <a href={`/api/v1/templates/custom/${t.id}/preview`} target="_blank" rel="noopener" className="btn-secondary text-xs flex-1 justify-center">
+                      Abrir em tela cheia
+                    </a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Galeria de variantes prontas */}
+      <h2 className="font-display text-xl font-semibold tracking-tight mb-4">🎨 Variantes prontas</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {variants.map((v, i) => (
           <article

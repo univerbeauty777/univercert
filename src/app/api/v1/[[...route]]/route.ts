@@ -6,7 +6,7 @@ import { handle } from 'hono/vercel';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { certificateRequests, recipients, workspaces, credentials, brandKits } from '@/db/schema';
+import { certificateRequests, recipients, workspaces, credentials, brandKits, templates } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { isValidCPF, cleanCPF } from '@/lib/cpf';
 import { issueCredentialFromRequest, rejectRequest, computeCertHash } from '@/lib/credentials';
@@ -374,6 +374,51 @@ app.post('/demo/issue', async (c) => {
     },
     201,
   );
+});
+
+// ----------------------------------------
+// GET /api/v1/templates  — lista templates do workspace
+// ----------------------------------------
+app.get('/templates', async (c) => {
+  const slug = c.req.query('workspace') ?? 'univerhair';
+  const db = getDb();
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+  if (!ws) return c.json({ error: 'workspace_not_found' }, 404);
+  const list = await db.select().from(templates).where(eq(templates.workspaceId, ws.id));
+  return c.json({ templates: list });
+});
+
+// ----------------------------------------
+// GET /api/v1/templates/custom/:id/preview
+// Preview de template customizado salvo
+// ----------------------------------------
+app.get('/templates/custom/:id/preview', async (c) => {
+  const id = c.req.param('id');
+  const db = getDb();
+  const [tpl] = await db.select().from(templates).where(eq(templates.id, id)).limit(1);
+  if (!tpl) return c.json({ error: 'not_found' }, 404);
+
+  const html = renderCertificateHtml({
+    recipientName: 'Maria Aparecida da Silva',
+    cpf: '12345678900',
+    courseName: 'Alisamento Profissional · Liso Blindado',
+    courseHours: 40,
+    issuedAt: Math.floor(Date.now() / 1000),
+    credentialId: 'cred_PREVIEW_EXAMPLE',
+    hashSha256: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+    workspaceName: 'UniverCert',
+    verifyUrl: 'https://univercert.com.br/v/preview',
+    variant: 'custom',
+    customLayoutJson: tpl.layoutJson,
+  });
+
+  return new Response(html, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+      'x-frame-options': 'SAMEORIGIN',
+    },
+  });
 });
 
 // ----------------------------------------

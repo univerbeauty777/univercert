@@ -1,8 +1,8 @@
-// UniverCert · Templates · galeria + editor de personalização (Sprint 12)
+// UniverCert · Templates · galeria + editor de personalização (Sprint 12+14)
 
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { brandKits, workspaces } from '@/db/schema';
+import { brandKits, workspaces, templates } from '@/db/schema';
 import { CERT_VARIANTS } from '@/lib/cert-template';
 import PageHeader from '@/components/PageHeader';
 import TemplatesGalleryClient from './TemplatesGalleryClient';
@@ -21,6 +21,15 @@ export default async function TemplatesPage() {
     .where(eq(workspaces.slug, workspaceSlug))
     .limit(1);
 
+  // Templates customizados do workspace
+  const customTemplates = ws?.workspace
+    ? await db
+        .select()
+        .from(templates)
+        .where(eq(templates.workspaceId, ws.workspace.id))
+        .limit(50)
+    : [];
+
   const initialPrimary = ws?.brand?.primaryColor ?? '#1B2D5E';
   const initialAccent = ws?.brand?.secondaryColor ?? '#D4A937';
   const workspaceName = ws?.workspace?.name ?? 'UniverCert';
@@ -31,11 +40,17 @@ export default async function TemplatesPage() {
         <PageHeader
           icon="🎨"
           title="Templates de certificado"
-          subtitle={`${CERT_VARIANTS.length} variantes premium · personalize cores e veja o preview ao vivo`}
+          subtitle={`${CERT_VARIANTS.length} variantes premium · ${customTemplates.length} customizado${customTemplates.length !== 1 ? 's' : ''} · personalize cores ou crie do zero`}
+          actions={
+            <a href="/templates/new" className="btn-gradient text-sm">
+              ✏ Criar template do zero
+            </a>
+          }
         />
 
         <TemplatesGalleryClient
           variants={CERT_VARIANTS as any}
+          customTemplates={customTemplates.map((t) => ({ id: t.id, name: t.name, vertical: t.vertical ?? 'livre' }))}
           initialPrimary={initialPrimary}
           initialAccent={initialAccent}
           workspaceName={workspaceName}
