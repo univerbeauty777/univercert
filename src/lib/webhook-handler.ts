@@ -1,10 +1,25 @@
 // UniverCert · pipeline genérico de webhook → request
 // Cada provider extrai o payload no seu formato e chama processWebhook().
+// Sprint 20: lê integration.configJson pra auto_approve + course→template mapping.
 
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workspaces, integrations, recipients, certificateRequests, webhooksIn } from '@/db/schema';
+import { workspaces, integrations, recipients, certificateRequests, webhooksIn, credentials } from '@/db/schema';
 import { ID } from './ulid';
+import { computeCertHash } from '@/lib/credentials';
+import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
+
+type IntegrationConfig = {
+  auto_approve?: boolean;
+  send_email?: boolean;
+  default_template?: string;
+  course_template_map?: Record<string, string>;  // courseName ou courseSlug → templateId/variant
+};
+
+function parseIntegrationConfig(raw: string | null | undefined): IntegrationConfig {
+  if (!raw) return {};
+  try { return JSON.parse(raw) as IntegrationConfig; } catch { return {}; }
+}
 
 export type WebhookProvider = 'hotmart' | 'memberkit' | 'fluent' | 'kiwify' | 'eduzz' | 'hubla' | 'greenn';
 
@@ -22,7 +37,7 @@ export type NormalizedWebhookPayload = {
 };
 
 export type WebhookHandlerResult =
-  | { ok: true; requestId: string; recipientId: string }
+  | { ok: true; requestId: string; recipientId: string; credentialId?: string; autoApproved?: boolean }
   | { ok: false; status: number; error: string };
 
 /**
@@ -80,7 +95,16 @@ export async function processWebhook(
     recipientId = created.id;
   }
 
-  // Cria request pending
+  // Le config da integration (auto_approve, course mapping)
+  const [integ] = await db
+    .select()
+    .from(integrations)
+    .where(and(eq(integrations.workspaceId, ws.id), eq(integrations.provider, provider)))
+    .limit(1);
+  const cfg = parseIntegrationConfig(integ?.configJson);
+  const autoApprove = cfg.auto_approve === true;
+
+  // Cria request (pending OU approved se auto_approve)
   const [req] = await db
     .insert(certificateRequests)
     .values({
@@ -92,12 +116,76 @@ export async function processWebhook(
         provider,
         webhook_id: webhookId,
         external_ref: normalized.externalRef,
+        auto_approved: autoApprove,
       }),
       courseName: normalized.courseName,
       courseHours: normalized.courseHours,
-      status: 'pending',
+      status: autoApprove ? 'approved' : 'pending',
     })
     .returning();
+
+  // Se auto_approve: cria credential direto + dispara workflow email
+  let credentialId: string | undefined;
+  if (autoApprove) {
+    try {
+      const issuedAt = Math.floor(Date.now() / 1000);
+      const credId = ID.credential();
+      const hash = await computeCertHash({
+        workspaceId: ws.id,
+        recipientId,
+        recipientName: normalized.student.name,
+        cpf: normalized.student.cpf ?? null,
+        courseName: normalized.courseName,
+        courseHours: normalized.courseHours ?? null,
+        issuedAt,
+      });
+
+      // Course → template mapping (matches por nome exato; fallback default_template)
+      const mappedTemplate =
+        cfg.course_template_map?.[normalized.courseName] ??
+        cfg.default_template ??
+        null;
+
+      const [cred] = await db
+        .insert(credentials)
+        .values({
+          id: credId,
+          workspaceId: ws.id,
+          requestId: req.id,
+          recipientId,
+          hashSha256: hash,
+          courseName: normalized.courseName,
+          courseHours: normalized.courseHours ?? null,
+          issuedAt,
+          metadataJson: JSON.stringify({
+            source: provider,
+            auto_approved: true,
+            template_variant: mappedTemplate,
+            external_ref: normalized.externalRef,
+          }),
+        })
+        .returning();
+      credentialId = cred.id;
+
+      // Dispara workflows configurados (email engine S18)
+      const sendEmailFlag = cfg.send_email !== false;       // default true
+      if (sendEmailFlag) {
+        try {
+          await dispatchWorkflowsFor({
+            workspaceId: ws.id,
+            triggerEvent: 'credential.issued',
+            credentialId: cred.id,
+            channel: 'email',
+          });
+        } catch (e) {
+          console.error('[webhook] dispatch failed:', (e as Error).message);
+        }
+      }
+    } catch (e) {
+      console.error('[webhook] auto-approve issue failed:', (e as Error).message);
+      // Mesmo se a issue falhar, continuamos — o request fica como approved e dá pra retry manual
+    }
+  }
 
   // Marca webhook como processado
   await db
@@ -105,7 +193,7 @@ export async function processWebhook(
     .set({ status: 'processed', processedAt: Math.floor(Date.now() / 1000) })
     .where(eq(webhooksIn.id, webhookId));
 
-  return { ok: true, requestId: req.id, recipientId };
+  return { ok: true, requestId: req.id, recipientId, credentialId, autoApproved: autoApprove };
 }
 
 /**
