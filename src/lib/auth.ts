@@ -36,15 +36,6 @@ export function getAuth() {
         // Campos opcionais — `image` agora existe na tabela users (migration 0005)
       },
     },
-    session: {
-      modelName: 'sessions',
-      expiresIn: 60 * 60 * 24 * 30, // 30 dias
-      updateAge: 60 * 60 * 24, // refresh sliding após 1 dia
-      cookieCache: {
-        enabled: true,
-        maxAge: 5 * 60, // cache de 5min p/ reduzir DB hits
-      },
-    },
     advanced: {
       cookiePrefix: 'uc',
       useSecureCookies: true,
@@ -74,12 +65,32 @@ export function getAuth() {
           }
         : undefined,
     secret: (env as any).BETTER_AUTH_SECRET || 'dev-only-change-me-NOT-FOR-PROD',
-    baseURL: (env as any).BETTER_AUTH_URL || 'https://univercert.com.br',
+    // Sprint 19 hotfix: NÃO hardcoda domínio.
+    // Better Auth detecta baseURL via request origin quando undefined.
+    // Antes: 'https://univercert.com.br' quebrava login em pages.dev.
+    baseURL: (env as any).BETTER_AUTH_URL || undefined,
     trustedOrigins: [
       'https://univercert.com.br',
       'https://univercert.pages.dev',
+      'https://*.univercert.pages.dev', // preview deploys
       'http://localhost:3000',
     ],
+    session: {
+      modelName: 'sessions',
+      expiresIn: 60 * 60 * 24 * 30,
+      updateAge: 60 * 60 * 24,
+      cookieCache: { enabled: true, maxAge: 5 * 60 },
+      // Mapeia colunas antigas → nomes esperados pelo Better Auth
+      fields: {
+        ipAddress: 'ipAddress',
+        userAgent: 'userAgent',
+        expiresAt: 'expiresAt',
+        token: 'token',
+        userId: 'userId',
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt',
+      },
+    },
     // Logging defensivo — se algo quebra, sabemos qual stage falhou.
     logger: {
       disabled: false,

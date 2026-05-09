@@ -270,9 +270,11 @@ export const sessions = sqliteTable(
     userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     token: text('token').notNull().unique(),
     expiresAt: integer('expires_at').notNull(),
-    ip: text('ip'),
+    ip: text('ip'), // legacy
+    ipAddress: text('ip_address'), // Better Auth standard (migration 0008)
     userAgent: text('user_agent'),
     createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`), // migration 0008
   },
   (t) => ({
     tokenIdx: index('idx_sessions_token').on(t.token),
