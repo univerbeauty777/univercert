@@ -1,5 +1,11 @@
 // UniverCert · cert template · Sprint 11 GODMODE
-// Layout editorial premium · A4 landscape · 2 variantes (classic, modern)
+// Layout editorial premium · A4 landscape · 16 variantes + custom V2
+
+import { formatCpf, formatDate, escapeHtml } from '@/lib/cert-template-shared';
+import { renderLayoutV2 } from '@/lib/layout-v2';
+
+// Re-export pra compat com codigo existente que importava daqui
+export { formatCpf, formatDate, escapeHtml };
 
 type Args = {
   recipientName: string;
@@ -37,23 +43,7 @@ export const CERT_VARIANTS = [
   { id: 'coach', name: 'Coach', tagline: 'Motivacional bold', desc: 'Tipografia gritante, gradient laranja/vermelho, alta energia. Pra coaching, desenvolvimento pessoal, mentoria.', defaultPrimary: '#DC2626', defaultAccent: '#F59E0B' },
 ] as const;
 
-function formatCpf(cpf: string | null): string | null {
-  if (!cpf) return null;
-  const c = cpf.replace(/\D/g, '');
-  if (c.length !== 11) return cpf;
-  return `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}`;
-}
-
-function formatDate(unix: number): string {
-  return new Date(unix * 1000).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-  });
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
+// formatCpf, formatDate, escapeHtml movidos pra cert-template-shared.ts (S21)
 
 export function renderCertificateHtml(args: Args): string {
   const variant = args.variant ?? 'classic';
@@ -111,6 +101,26 @@ type CustomLayout = {
 
 function renderCustom(args: Args): string {
   if (!args.customLayoutJson) return renderClassic(args); // fallback
+  // Sprint 21: detect V2 layout (import-first) → delega
+  try {
+    const peek = JSON.parse(args.customLayoutJson);
+    if (peek?.version === 2) {
+      return renderLayoutV2(peek, {
+        recipientName: args.recipientName,
+        cpf: args.cpf,
+        courseName: args.courseName,
+        courseHours: args.courseHours,
+        issuedAt: args.issuedAt,
+        credentialId: args.credentialId,
+        hashSha256: args.hashSha256,
+        workspaceName: args.workspaceName,
+        verifyUrl: args.verifyUrl,
+        primaryColor: args.primaryColor,
+        accentColor: args.accentColor,
+      });
+    }
+  } catch { /* segue pra V1 */ }
+
   let layout: CustomLayout;
   try { layout = JSON.parse(args.customLayoutJson) as CustomLayout; }
   catch { return renderClassic(args); }

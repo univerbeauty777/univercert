@@ -40,7 +40,10 @@ export default async function TemplatesPage() {
         title="Templates de certificado"
         subtitle={`${CERT_VARIANTS.length} variantes premium · ${customTemplates.length} customizado${customTemplates.length !== 1 ? 's' : ''} · personalize cores ou crie do zero`}
         actions={
-          <a href="/templates/new" className="btn-primary btn-sm">+ Novo template</a>
+          <>
+            <a href="/templates/new" className="btn-secondary btn-sm">Editor antigo</a>
+            <a href="/templates/editor" className="btn-primary btn-sm">+ Novo template</a>
+          </>
         }
       />
 
