@@ -25,9 +25,10 @@ export const users = sqliteTable('users', {
   imageUrl: text('image_url'), // legacy, mantido pra compat
   passwordHash: text('password_hash'),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
-  lastLoginAt: integer('last_login_at'),
-  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
+  // Sprint 19 fix: mode 'timestamp' p/ Better Auth poder passar Date direto
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
 // 3. WORKSPACE MEMBERS
@@ -269,12 +270,13 @@ export const sessions = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     token: text('token').notNull().unique(),
-    expiresAt: integer('expires_at').notNull(),
+    // Sprint 19 fix: mode 'timestamp' p/ aceitar Date do Better Auth
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
     ip: text('ip'), // legacy
     ipAddress: text('ip_address'), // Better Auth standard (migration 0008)
     userAgent: text('user_agent'),
-    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
-    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`), // migration 0008
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   },
   (t) => ({
     tokenIdx: index('idx_sessions_token').on(t.token),
@@ -293,12 +295,13 @@ export const accounts = sqliteTable(
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     idToken: text('id_token'),
-    accessTokenExpiresAt: integer('access_token_expires_at'),
-    refreshTokenExpiresAt: integer('refresh_token_expires_at'),
+    // Sprint 19 fix: mode 'timestamp' p/ Better Auth Date passthrough
+    accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
+    refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
     scope: text('scope'),
     password: text('password'),
-    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
-    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   },
   (t) => ({
     userIdx: index('idx_accounts_user').on(t.userId),
@@ -360,9 +363,10 @@ export const verifications = sqliteTable(
     id: text('id').primaryKey(),
     identifier: text('identifier').notNull(),
     value: text('value').notNull(),
-    expiresAt: integer('expires_at').notNull(),
-    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
-    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+    // Sprint 19 fix: mode 'timestamp' p/ Better Auth Date passthrough
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   },
   (t) => ({
     identifierIdx: index('idx_verifications_identifier').on(t.identifier),
