@@ -466,6 +466,6 @@ export default async function VerticalPage({ params }: Params) {
   );
 }
 
-export async function generateStaticParams() {
-  return Object.keys(VERTICALS).map((vertical) => ({ vertical }));
-}
+// Sprint 19 fix: edge runtime + generateStaticParams são incompatíveis no Next 15.
+// Mantemos edge p/ Cloudflare Pages e fazemos lookup dinâmico (já é trivial — VERTICALS é em memória).
+// Se quiser SSG no futuro, remover `export const runtime = 'edge'` e voltar generateStaticParams.

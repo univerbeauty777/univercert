@@ -72,7 +72,7 @@ export const config = {
      * - _next/static (assets)
      * - _next/image (image optimization)
      * - favicon, sitemap, robots, OG image
-     * - api/v1/credentials/*/pdf  (CSP frame-ancestors precisa permitir embed do PDF)
+     * - api/v1/credentials/[id]/pdf  (CSP frame-ancestors precisa permitir embed do PDF)
      */
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|opengraph-image|icon|apple-icon).*)',
   ],
