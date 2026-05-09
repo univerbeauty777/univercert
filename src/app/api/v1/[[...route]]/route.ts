@@ -377,6 +377,42 @@ app.post('/demo/issue', async (c) => {
 });
 
 // ----------------------------------------
+// GET /api/v1/templates/:variant/preview
+// Preview de cada variante com dados fictícios (pra galeria)
+// ----------------------------------------
+app.get('/templates/:variant/preview', async (c) => {
+  const variant = c.req.param('variant') as 'classic' | 'modern' | 'gold' | 'minimal' | 'executive' | 'creative';
+  const valid = ['classic', 'modern', 'gold', 'minimal', 'executive', 'creative'];
+  if (!valid.includes(variant)) return c.json({ error: 'invalid_variant' }, 400);
+
+  const primary = c.req.query('primary');
+  const accent = c.req.query('accent');
+
+  const html = renderCertificateHtml({
+    recipientName: 'Maria Aparecida da Silva',
+    cpf: '12345678900',
+    courseName: 'Alisamento Profissional · Liso Blindado',
+    courseHours: 40,
+    issuedAt: Math.floor(Date.now() / 1000),
+    credentialId: 'cred_PREVIEW_EXAMPLE_ID_2026',
+    hashSha256: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+    workspaceName: c.req.query('workspace') ?? 'UniverCert',
+    verifyUrl: 'https://univercert.com.br/v/preview',
+    variant,
+    primaryColor: primary && /^#[0-9A-Fa-f]{6}$/.test(primary) ? primary : undefined,
+    accentColor: accent && /^#[0-9A-Fa-f]{6}$/.test(accent) ? accent : undefined,
+  });
+
+  return new Response(html, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+      'x-frame-options': 'SAMEORIGIN',
+    },
+  });
+});
+
+// ----------------------------------------
 // POST /api/v1/credentials/:id/notify
 // ----------------------------------------
 app.post('/credentials/:id/notify', async (c) => {

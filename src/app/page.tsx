@@ -17,11 +17,11 @@ export default function HomePage() {
               <span className="text-accent">CERT</span>
             </span>
           </a>
-          <nav className="hidden md:flex gap-7 text-sm font-medium text-ink-700">
+          <nav className="hidden md:flex gap-6 text-sm font-medium text-ink-700">
             <a href="/demo" className="hover:text-primary transition">Demo</a>
             <a href="#features" className="hover:text-primary transition">Recursos</a>
-            <a href="#integracoes" className="hover:text-primary transition">Integrações</a>
             <a href="#precos" className="hover:text-primary transition">Preços</a>
+            <a href="/roi" className="hover:text-primary transition">ROI</a>
             <a href="#faq" className="hover:text-primary transition">FAQ</a>
           </nav>
           <div className="flex gap-2 items-center">

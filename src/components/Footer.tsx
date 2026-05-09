@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-950 text-gray-400 pt-14 pb-8 text-sm">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-10">
           {/* Brand */}
           <div className="col-span-2">
             <a href="/" className="flex items-center gap-2.5 mb-3">
@@ -40,19 +40,32 @@ export default function Footer() {
               <FooterLink href="/#features">Recursos</FooterLink>
               <FooterLink href="/#integracoes">Integrações</FooterLink>
               <FooterLink href="/#precos">Preços</FooterLink>
+              <FooterLink href="/roi">🧮 ROI calculator</FooterLink>
               <FooterLink href="/reseller">Reseller Program</FooterLink>
+            </ul>
+          </div>
+
+          {/* Comparativos */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4">Comparar</h4>
+            <ul className="space-y-2 text-xs">
+              <FooterLink href="/vs/certifier">vs Certifier 🇺🇸</FooterLink>
+              <FooterLink href="/vs/sertifier">vs Sertifier 🇹🇷</FooterLink>
+              <FooterLink href="/vs/canva">vs Canva</FooterLink>
+              <FooterLink href="/casos">Por nicho</FooterLink>
+              <FooterLink href="/casos/cabelo">💇 Cabelo</FooterLink>
+              <FooterLink href="/casos/online">💻 Cursos online</FooterLink>
             </ul>
           </div>
 
           {/* Recursos */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4">Recursos</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4">Começar</h4>
             <ul className="space-y-2 text-xs">
-              <FooterLink href="/demo">🧪 Demo (sem cadastro)</FooterLink>
+              <FooterLink href="/demo">🧪 Demo · sem cadastro</FooterLink>
+              <FooterLink href="/sign-up">Criar conta grátis</FooterLink>
               <FooterLink href="/uh/solicitar">Pedir certificado</FooterLink>
               <FooterLink href="https://developer.univercert.com.br">API Docs</FooterLink>
-              <FooterLink href="/#como-funciona">Como funciona</FooterLink>
-              <FooterLink href="/sign-up">Começar grátis</FooterLink>
             </ul>
           </div>
 
