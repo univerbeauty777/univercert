@@ -22,11 +22,16 @@ export function getAuth() {
   cachedAuth = betterAuth({
     database: drizzleAdapter(db, {
       provider: 'sqlite',
+      // Sprint 19 FINAL FIX: passar schema inteiro (Drizzle exporta variaveis
+      // pluralizadas: users, sessions, accounts, verifications). Better Auth
+      // usa modelName ('users'/'sessions'/...) pra lookup.
+      // Antes: schema:{ user: ... } com modelName:'users' → adapter procurava
+      // schema['users'] e nao encontrava (so tinha 'user').
       schema: {
-        user: schema.users,
-        session: schema.sessions,
-        account: schema.accounts,
-        verification: schema.verifications,
+        users: schema.users,
+        sessions: schema.sessions,
+        accounts: schema.accounts,
+        verifications: schema.verifications,
       },
     }),
     user: {
