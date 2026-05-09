@@ -1,10 +1,13 @@
 'use client';
 
-// UniverCert · Template Editor V2 — Canvas import-first com zones editaveis
+// UniverCert · Template Editor V2 — GODMODE polish (S22b)
+// Recursos: undo/redo · resize 8-handles · drag · atalhos teclado · z-index ·
+// font upload · duplicate · lock toggle · snap guides centro/edges.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation } from '@/lib/layout-v2';
 import { pdfFileToPngBlob, detectOrientation } from '@/lib/pdf-to-png';
+import { useLayoutHistory } from '@/lib/editor-history';
 
 const SAMPLE = {
   recipientName: 'Maria Aparecida da Silva',
@@ -18,7 +21,7 @@ const SAMPLE = {
   credentialId: 'cred_DEMO',
 };
 
-const FONT_OPTIONS = [
+const BUILTIN_FONTS = [
   'Inter', 'Cormorant Garamond', 'Playfair Display', 'Cinzel',
   'Archivo Black', 'JetBrains Mono', 'Dancing Script', 'Patrick Hand',
 ];
@@ -38,6 +41,8 @@ const FIELD_TEMPLATES: { type: FieldType; label: string; icon: string; defaultSt
   { type: 'image', label: 'Imagem (logo/assinatura)', icon: '🖼' },
 ];
 
+type CustomFont = { family: string; url: string };
+
 type Props = {
   initialLayout?: LayoutV2;
   templateId?: string;
@@ -46,19 +51,40 @@ type Props = {
 };
 
 export default function TemplateEditorV2({ initialLayout, templateId, templateName, onSave }: Props) {
-  const [layout, setLayout] = useState<LayoutV2>(initialLayout ?? defaultLayout());
+  const initial = initialLayout ?? defaultLayout();
+  const history = useLayoutHistory<LayoutV2>(initial);
+  const layout = history.state;
+  const setLayout = history.setState;
+  const commit = history.commit;
+
   const [name, setName] = useState(templateName ?? 'Meu template');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bgUploading, setBgUploading] = useState(false);
-  const [bgStage, setBgStage] = useState<string>('');
+  const [bgStage, setBgStage] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(0.5);
+  const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
+  const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const selected = layout.fields.find((f) => f.id === selectedId) ?? null;
 
-  /* ---- Background upload ---- */
+  /* -------------------- INJECT CUSTOM FONTS -------------------- */
+  useEffect(() => {
+    const styleId = 'uc-editor-fonts';
+    let el = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement('style');
+      el.id = styleId;
+      document.head.appendChild(el);
+    }
+    el.textContent = customFonts
+      .map((f) => `@font-face { font-family: '${f.family}'; src: url('${f.url}'); font-display: swap; }`)
+      .join('\n');
+  }, [customFonts]);
+
+  /* -------------------- BG UPLOAD -------------------- */
   const handleBackgroundUpload = async (file: File) => {
     setBgUploading(true);
     setErrorMsg(null);
@@ -67,7 +93,6 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       let detectedOrientation: Orientation | null = null;
       let importedFromLabel = file.name.toLowerCase().split('.').pop() ?? 'file';
 
-      // Sprint 21b: PDF -> PNG client-side via pdf.js
       if (file.type === 'application/pdf') {
         setBgStage('Carregando pdf.js…');
         const conv = await pdfFileToPngBlob(file, 2.5);
@@ -87,18 +112,13 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       if (!data.ok) throw new Error(data.error);
 
       const isSvg = file.type === 'image/svg+xml';
-
       setLayout((l) => ({
         ...l,
-        // Auto-detecta orientation do PDF (caso seja portrait, vira layout portrait)
         orientation: detectedOrientation ?? l.orientation,
-        background: {
-          type: isSvg ? 'svg' : 'image',     // PDF agora vira image apos conversao
-          src: data.url,
-          cover: false,
-        },
+        background: { type: isSvg ? 'svg' : 'image', src: data.url, cover: false },
         meta: { ...l.meta, importedFrom: importedFromLabel },
       }));
+      commit();
     } catch (e) {
       setErrorMsg('Falha no upload: ' + (e as Error).message);
     } finally {
@@ -107,11 +127,29 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     }
   };
 
-  /* ---- Field actions ---- */
+  /* -------------------- FONT UPLOAD -------------------- */
+  const handleFontUpload = async (file: File) => {
+    const baseName = file.name.replace(/\.(ttf|otf|woff2?|eot)$/i, '').replace(/[_-]+/g, ' ').trim();
+    const family = prompt(`Nome da família (ex: "${baseName}"):`, baseName) || baseName;
+    if (!family) return;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('family', family);
+      const r = await fetch('/api/internal/fonts/upload', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.error);
+      setCustomFonts((f) => [...f.filter((x) => x.family !== data.family), { family: data.family, url: data.url }]);
+    } catch (e) {
+      setErrorMsg('Falha font: ' + (e as Error).message);
+    }
+  };
+
+  /* -------------------- FIELD ACTIONS -------------------- */
   const addField = (type: FieldType) => {
     const tmpl = FIELD_TEMPLATES.find((t) => t.type === type)!;
     const newField: LayoutField = {
-      id: `f-${Date.now().toString(36)}`,
+      id: `f-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
       type,
       x: 30, y: 40, w: 40, h: type === 'qr' ? 16 : 8,
       style: tmpl.defaultStyle,
@@ -119,48 +157,206 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     };
     setLayout((l) => ({ ...l, fields: [...l.fields, newField] }));
     setSelectedId(newField.id);
+    commit();
   };
 
-  const updateField = (id: string, patch: Partial<LayoutField>) => {
+  const updateField = useCallback((id: string, patch: Partial<LayoutField>) => {
     setLayout((l) => ({
       ...l,
       fields: l.fields.map((f) => (f.id === id ? { ...f, ...patch, style: { ...f.style, ...patch.style } } : f)),
     }));
-  };
+  }, [setLayout]);
 
-  const deleteField = (id: string) => {
+  const deleteField = useCallback((id: string) => {
     setLayout((l) => ({ ...l, fields: l.fields.filter((f) => f.id !== id) }));
     setSelectedId(null);
+    commit();
+  }, [setLayout, commit]);
+
+  const duplicateField = useCallback((id: string) => {
+    setLayout((l) => {
+      const orig = l.fields.find((f) => f.id === id);
+      if (!orig) return l;
+      const dup: LayoutField = {
+        ...orig,
+        id: `f-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+        x: Math.min(95, orig.x + 3),
+        y: Math.min(95, orig.y + 3),
+        locked: false,
+      };
+      return { ...l, fields: [...l.fields, dup] };
+    });
+    commit();
+  }, [setLayout, commit]);
+
+  const moveZ = useCallback((id: string, delta: 'forward' | 'backward' | 'front' | 'back') => {
+    setLayout((l) => {
+      const max = Math.max(...l.fields.map((f) => f.z ?? 1));
+      const min = Math.min(...l.fields.map((f) => f.z ?? 1));
+      return {
+        ...l,
+        fields: l.fields.map((f) => {
+          if (f.id !== id) return f;
+          const cur = f.z ?? 1;
+          let z = cur;
+          if (delta === 'forward') z = cur + 1;
+          if (delta === 'backward') z = Math.max(0, cur - 1);
+          if (delta === 'front') z = max + 1;
+          if (delta === 'back') z = Math.max(0, min - 1);
+          return { ...f, z };
+        }),
+      };
+    });
+    commit();
+  }, [setLayout, commit]);
+
+  /* -------------------- SNAP GUIDES -------------------- */
+  const computeSnap = (movingField: LayoutField, x: number, y: number): { x: number; y: number; lines: { x?: number; y?: number } } => {
+    const SNAP = 1.0;  // % threshold
+    const lines: { x?: number; y?: number } = {};
+    let snappedX = x;
+    let snappedY = y;
+    const cx = x + movingField.w / 2;
+    const cy = y + movingField.h / 2;
+    // Snap to canvas center
+    if (Math.abs(cx - 50) < SNAP) { snappedX = 50 - movingField.w / 2; lines.x = 50; }
+    if (Math.abs(cy - 50) < SNAP) { snappedY = 50 - movingField.h / 2; lines.y = 50; }
+    // Snap to other fields' x/y/center
+    for (const f of layout.fields) {
+      if (f.id === movingField.id) continue;
+      const fcx = f.x + f.w / 2;
+      const fcy = f.y + f.h / 2;
+      if (Math.abs(cx - fcx) < SNAP) { snappedX = fcx - movingField.w / 2; lines.x = fcx; }
+      if (Math.abs(x - f.x) < SNAP) { snappedX = f.x; lines.x = f.x; }
+      if (Math.abs(cy - fcy) < SNAP) { snappedY = fcy - movingField.h / 2; lines.y = fcy; }
+      if (Math.abs(y - f.y) < SNAP) { snappedY = f.y; lines.y = f.y; }
+    }
+    return { x: snappedX, y: snappedY, lines };
   };
 
-  /* ---- Drag handler ---- */
-  const handleDrag = useCallback((id: string, startX: number, startY: number, ev: React.MouseEvent) => {
+  /* -------------------- DRAG -------------------- */
+  const handleDrag = useCallback((id: string, ev: React.MouseEvent) => {
     ev.preventDefault();
+    ev.stopPropagation();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const startPctX = ((ev.clientX - rect.left) / rect.width) * 100;
-    const startPctY = ((ev.clientY - rect.top) / rect.height) * 100;
-    const offsetX = startPctX - startX;
-    const offsetY = startPctY - startY;
+    const field = layout.fields.find((f) => f.id === id);
+    if (!field || field.locked) return;
+
+    const startMouseX = ev.clientX;
+    const startMouseY = ev.clientY;
+    const startX = field.x;
+    const startY = field.y;
 
     const onMove = (e: MouseEvent) => {
-      const px = ((e.clientX - rect.left) / rect.width) * 100 - offsetX;
-      const py = ((e.clientY - rect.top) / rect.height) * 100 - offsetY;
-      updateField(id, {
-        x: Math.max(0, Math.min(95, snap(px))),
-        y: Math.max(0, Math.min(95, snap(py))),
-      });
+      const dx = ((e.clientX - startMouseX) / rect.width) * 100;
+      const dy = ((e.clientY - startMouseY) / rect.height) * 100;
+      const rawX = startX + dx;
+      const rawY = startY + dy;
+      const { x, y, lines } = computeSnap(field, rawX, rawY);
+      setLayout((l) => ({
+        ...l,
+        fields: l.fields.map((f) => (f.id === id ? { ...f, x: clamp(x, 0, 100 - field.w), y: clamp(y, 0, 100 - field.h) } : f)),
+      }));
+      setSnapLines(lines);
     };
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      setSnapLines({});
+      commit();
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, []);
+  }, [layout.fields, setLayout, commit]);
 
-  /* ---- Save ---- */
+  /* -------------------- RESIZE -------------------- */
+  type ResizeDir = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+  const handleResize = useCallback((id: string, dir: ResizeDir, ev: React.MouseEvent) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const field = layout.fields.find((f) => f.id === id);
+    if (!field || field.locked) return;
+    const startMouseX = ev.clientX;
+    const startMouseY = ev.clientY;
+    const start = { x: field.x, y: field.y, w: field.w, h: field.h };
+
+    const onMove = (e: MouseEvent) => {
+      const dx = ((e.clientX - startMouseX) / rect.width) * 100;
+      const dy = ((e.clientY - startMouseY) / rect.height) * 100;
+      let nx = start.x, ny = start.y, nw = start.w, nh = start.h;
+      if (dir.includes('e')) nw = Math.max(2, start.w + dx);
+      if (dir.includes('s')) nh = Math.max(2, start.h + dy);
+      if (dir.includes('w')) { nx = start.x + dx; nw = Math.max(2, start.w - dx); if (nw === 2) nx = start.x + start.w - 2; }
+      if (dir.includes('n')) { ny = start.y + dy; nh = Math.max(2, start.h - dy); if (nh === 2) ny = start.y + start.h - 2; }
+      // Clamp
+      nx = clamp(nx, 0, 100); ny = clamp(ny, 0, 100);
+      nw = clamp(nw, 2, 100 - nx); nh = clamp(nh, 2, 100 - ny);
+      setLayout((l) => ({
+        ...l,
+        fields: l.fields.map((f) => (f.id === id ? { ...f, x: nx, y: ny, w: nw, h: nh } : f)),
+      }));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      commit();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [layout.fields, setLayout, commit]);
+
+  /* -------------------- KEYBOARD SHORTCUTS -------------------- */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      // Ignora se ta digitando em input/textarea
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return;
+
+      const meta = e.metaKey || e.ctrlKey;
+
+      if (meta && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        if (e.shiftKey) history.redo();
+        else history.undo();
+        return;
+      }
+      if (meta && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault(); history.redo(); return;
+      }
+      if (selectedId && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault(); deleteField(selectedId); return;
+      }
+      if (selectedId && meta && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault(); duplicateField(selectedId); return;
+      }
+      if (selectedId && meta && e.key === ']') {
+        e.preventDefault(); moveZ(selectedId, e.shiftKey ? 'front' : 'forward'); return;
+      }
+      if (selectedId && meta && e.key === '[') {
+        e.preventDefault(); moveZ(selectedId, e.shiftKey ? 'back' : 'backward'); return;
+      }
+      if (selectedId && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        const f = layout.fields.find((x) => x.id === selectedId);
+        if (f && !f.locked) {
+          updateField(selectedId, { x: clamp(f.x + dx, 0, 100 - f.w), y: clamp(f.y + dy, 0, 100 - f.h) });
+          commit();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId, history, deleteField, duplicateField, moveZ, layout.fields, updateField, commit]);
+
+  /* -------------------- SAVE -------------------- */
   const handleSave = async () => {
     setSaveState('saving');
     setErrorMsg(null);
@@ -179,19 +375,22 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     }
   };
 
-  /* ---- Orientation toggle ---- */
+  /* -------------------- ORIENTATION -------------------- */
   const toggleOrientation = () => {
     setLayout((l) => ({ ...l, orientation: l.orientation === 'landscape' ? 'portrait' : 'landscape' }));
+    commit();
   };
 
   const isLandscape = layout.orientation === 'landscape';
   const canvasStyle: React.CSSProperties = isLandscape
-    ? { width: 297 * zoom * 3.78, height: 210 * zoom * 3.78 }     // 1mm = 3.78px
+    ? { width: 297 * zoom * 3.78, height: 210 * zoom * 3.78 }
     : { width: 210 * zoom * 3.78, height: 297 * zoom * 3.78 };
+
+  const allFonts = [...BUILTIN_FONTS, ...customFonts.map((f) => f.family)];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_300px] gap-3 h-[calc(100vh-160px)]">
-      {/* LEFT PANEL · Add fields */}
+      {/* LEFT */}
       <aside className="card overflow-y-auto">
         <h3 className="text-sm font-semibold mb-3">Adicionar campo</h3>
         <div className="grid grid-cols-2 gap-2">
@@ -217,11 +416,30 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
           />
           {layout.background?.type !== 'color' && (
             <button
-              onClick={() => setLayout((l) => ({ ...l, background: { type: 'color', src: '#ffffff' } }))}
+              onClick={() => { setLayout((l) => ({ ...l, background: { type: 'color', src: '#ffffff' } })); commit(); }}
               className="btn-ghost btn-sm w-full mt-2 text-xs"
             >
               Remover background
             </button>
+          )}
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-[rgb(var(--border))]">
+          <h3 className="text-sm font-semibold mb-2">Fontes customizadas</h3>
+          <FileDropZone
+            label="Subir TTF/OTF/WOFF2"
+            accept=".ttf,.otf,.woff,.woff2,font/*,application/octet-stream"
+            onFile={handleFontUpload}
+          />
+          {customFonts.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {customFonts.map((f) => (
+                <li key={f.family} className="text-[11px] text-[rgb(var(--fg-muted))] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--success))]" />
+                  <span style={{ fontFamily: f.family }}>{f.family}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -231,11 +449,24 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
             {isLandscape ? '↻ Landscape (A4)' : '↻ Portrait (A4)'}
           </button>
         </div>
+
+        <div className="mt-5 pt-4 border-t border-[rgb(var(--border))]">
+          <h3 className="text-sm font-semibold mb-2">Atalhos</h3>
+          <ul className="text-[11px] text-[rgb(var(--fg-muted))] space-y-1 leading-relaxed">
+            <li><kbd className="kbd">⌘Z</kbd> desfazer</li>
+            <li><kbd className="kbd">⌘⇧Z</kbd> refazer</li>
+            <li><kbd className="kbd">⌫</kbd> apagar</li>
+            <li><kbd className="kbd">⌘D</kbd> duplicar</li>
+            <li><kbd className="kbd">←↑→↓</kbd> mover (1%)</li>
+            <li><kbd className="kbd">⇧+seta</kbd> mover (5%)</li>
+            <li><kbd className="kbd">⌘]</kbd> trazer pra frente</li>
+            <li><kbd className="kbd">⌘[</kbd> mandar pra trás</li>
+          </ul>
+        </div>
       </aside>
 
       {/* CANVAS */}
       <main className="card !p-3 overflow-auto bg-[rgb(var(--surface-2))]">
-        {/* Toolbar */}
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <input
             type="text"
@@ -245,10 +476,13 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
             placeholder="Nome do template"
           />
           <div className="flex items-center gap-2">
+            <button onClick={history.undo} disabled={!history.canUndo} className="btn-ghost btn-sm" title="Desfazer (⌘Z)">↶</button>
+            <button onClick={history.redo} disabled={!history.canRedo} className="btn-ghost btn-sm" title="Refazer (⌘⇧Z)">↷</button>
+            <span className="mx-1 h-5 w-px bg-[rgb(var(--border))]" />
             <ZoomBtn label="−" onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))} />
             <span className="text-xs font-num w-12 text-center">{Math.round(zoom * 100)}%</span>
             <ZoomBtn label="+" onClick={() => setZoom((z) => Math.min(1.2, z + 0.1))} />
-            <span className="mx-2 h-5 w-px bg-[rgb(var(--border))]" />
+            <span className="mx-1 h-5 w-px bg-[rgb(var(--border))]" />
             <button onClick={handleSave} disabled={saveState === 'saving'} className="btn-primary btn-sm">
               {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? '✓ Salvo' : 'Salvar template'}
             </button>
@@ -259,7 +493,6 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
           <div className="mb-3 px-3 py-2 bg-[rgb(var(--danger-soft))] text-[rgb(var(--danger))] text-sm rounded-md">{errorMsg}</div>
         )}
 
-        {/* Canvas */}
         <div className="flex items-start justify-center min-h-full">
           <div
             ref={canvasRef}
@@ -277,12 +510,12 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
               flexShrink: 0,
             }}
           >
-            {layout.background?.type === 'pdf' && (
-              <object
-                data={layout.background.src}
-                type="application/pdf"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-              />
+            {/* Snap lines */}
+            {snapLines.x != null && (
+              <div style={{ position: 'absolute', left: `${snapLines.x}%`, top: 0, bottom: 0, width: 1, background: '#06B6D4', pointerEvents: 'none', zIndex: 1000 }} />
+            )}
+            {snapLines.y != null && (
+              <div style={{ position: 'absolute', top: `${snapLines.y}%`, left: 0, right: 0, height: 1, background: '#06B6D4', pointerEvents: 'none', zIndex: 1000 }} />
             )}
 
             {layout.fields.map((f) => (
@@ -291,14 +524,15 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
                 field={f}
                 selected={selectedId === f.id}
                 onClick={(e) => { e.stopPropagation(); setSelectedId(f.id); }}
-                onMouseDown={(e) => handleDrag(f.id, f.x, f.y, e)}
+                onDragStart={(e) => handleDrag(f.id, e)}
+                onResizeStart={(dir, e) => handleResize(f.id, dir as any, e)}
               />
             ))}
           </div>
         </div>
       </main>
 
-      {/* RIGHT PANEL · Style */}
+      {/* RIGHT INSPECTOR */}
       <aside className="card overflow-y-auto">
         {!selected ? (
           <div className="text-sm text-[rgb(var(--fg-muted))] text-center py-8">
@@ -307,8 +541,13 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
         ) : (
           <FieldInspector
             field={selected}
+            allFonts={allFonts}
             onChange={(patch) => updateField(selected.id, patch)}
+            onCommit={commit}
             onDelete={() => deleteField(selected.id)}
+            onDuplicate={() => duplicateField(selected.id)}
+            onMoveZ={(dir) => moveZ(selected.id, dir)}
+            onToggleLock={() => { updateField(selected.id, { locked: !selected.locked }); commit(); }}
           />
         )}
       </aside>
@@ -318,8 +557,8 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
 
 /* ============================================================ */
 
-function snap(n: number): number {
-  return Math.round(n * 2) / 2;
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
 }
 
 function defaultLayout(): LayoutV2 {
@@ -339,12 +578,13 @@ function defaultLayout(): LayoutV2 {
 }
 
 function FieldOnCanvas({
-  field, selected, onClick, onMouseDown,
+  field, selected, onClick, onDragStart, onResizeStart,
 }: {
   field: LayoutField;
   selected: boolean;
   onClick: (e: React.MouseEvent) => void;
-  onMouseDown: (e: React.MouseEvent) => void;
+  onDragStart: (e: React.MouseEvent) => void;
+  onResizeStart: (dir: string, e: React.MouseEvent) => void;
 }) {
   const sample = previewContent(field);
   const css: React.CSSProperties = {
@@ -373,38 +613,62 @@ function FieldOnCanvas({
     zIndex: field.z ?? 1,
     userSelect: 'none',
   };
-  if (field.type === 'qr') {
-    return (
-      <div style={css} onClick={onClick} onMouseDown={field.locked ? undefined : onMouseDown}>
-        <div style={{
-          width: '100%',
-          height: '100%',
-          border: '1px solid #ccc',
-          background: '#fff',
-          display: 'grid',
-          placeItems: 'center',
-          fontFamily: 'monospace',
-          fontSize: 9,
-          color: '#666',
-        }}>
-          QR
-        </div>
-      </div>
-    );
-  }
-  if (field.type === 'image') {
-    return (
-      <div style={css} onClick={onClick} onMouseDown={field.locked ? undefined : onMouseDown}>
-        {field.src
-          ? <img src={field.src} alt="" style={{ width: '100%', height: '100%', objectFit: field.style?.fit ?? 'contain' }} />
-          : <span style={{ fontSize: 11, color: '#999' }}>(imagem · upload no painel direito)</span>}
-      </div>
-    );
-  }
+
+  const inner = field.type === 'qr' ? (
+    <div style={{ width: '100%', height: '100%', border: '1px solid #ccc', background: '#fff', display: 'grid', placeItems: 'center', fontFamily: 'monospace', fontSize: 9, color: '#666' }}>QR</div>
+  ) : field.type === 'image' ? (
+    field.src
+      ? <img src={field.src} alt="" style={{ width: '100%', height: '100%', objectFit: field.style?.fit ?? 'contain' }} />
+      : <span style={{ fontSize: 11, color: '#999' }}>(imagem · upload no painel direito)</span>
+  ) : (
+    <span style={{ width: '100%' }}>{sample}</span>
+  );
+
   return (
-    <div style={css} onClick={onClick} onMouseDown={field.locked ? undefined : onMouseDown}>
-      <span style={{ width: '100%' }}>{sample}</span>
+    <div
+      style={css}
+      onClick={onClick}
+      onMouseDown={field.locked ? undefined : onDragStart}
+    >
+      {inner}
+      {selected && !field.locked && (
+        <>
+          {(['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const).map((dir) => (
+            <ResizeHandle key={dir} dir={dir} onMouseDown={(e) => onResizeStart(dir, e)} />
+          ))}
+        </>
+      )}
+      {field.locked && (
+        <span style={{ position: 'absolute', top: 2, right: 2, fontSize: 9, color: '#6B7280', pointerEvents: 'none' }}>🔒</span>
+      )}
     </div>
+  );
+}
+
+function ResizeHandle({ dir, onMouseDown }: { dir: string; onMouseDown: (e: React.MouseEvent) => void }) {
+  const positions: Record<string, React.CSSProperties> = {
+    nw: { left: -4, top: -4, cursor: 'nwse-resize' },
+    n:  { left: '50%', top: -4, transform: 'translateX(-50%)', cursor: 'ns-resize' },
+    ne: { right: -4, top: -4, cursor: 'nesw-resize' },
+    e:  { right: -4, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' },
+    se: { right: -4, bottom: -4, cursor: 'nwse-resize' },
+    s:  { left: '50%', bottom: -4, transform: 'translateX(-50%)', cursor: 'ns-resize' },
+    sw: { left: -4, bottom: -4, cursor: 'nesw-resize' },
+    w:  { left: -4, top: '50%', transform: 'translateY(-50%)', cursor: 'ew-resize' },
+  };
+  return (
+    <div
+      onMouseDown={(e) => { e.stopPropagation(); onMouseDown(e); }}
+      style={{
+        position: 'absolute',
+        width: 8, height: 8,
+        background: '#1B2D5E',
+        border: '1px solid #fff',
+        borderRadius: 1,
+        zIndex: 1001,
+        ...positions[dir],
+      }}
+    />
   );
 }
 
@@ -423,33 +687,41 @@ function previewContent(field: LayoutField): string {
 }
 
 function FieldInspector({
-  field, onChange, onDelete,
+  field, allFonts, onChange, onCommit, onDelete, onDuplicate, onMoveZ, onToggleLock,
 }: {
   field: LayoutField;
+  allFonts: string[];
   onChange: (patch: Partial<LayoutField>) => void;
+  onCommit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
+  onMoveZ: (dir: 'forward' | 'backward' | 'front' | 'back') => void;
+  onToggleLock: () => void;
 }) {
   return (
     <div className="space-y-3 text-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">Editar campo</h3>
-        {!field.locked && (
-          <button onClick={onDelete} className="text-[rgb(var(--danger))] text-xs hover:underline">
-            Apagar
+        <div className="flex items-center gap-1">
+          <button onClick={onToggleLock} className="btn-ghost btn-sm text-xs" title={field.locked ? 'Desbloquear' : 'Bloquear'}>
+            {field.locked ? '🔒' : '🔓'}
           </button>
-        )}
+          <button onClick={onDuplicate} className="btn-ghost btn-sm text-xs" title="Duplicar (⌘D)">⎘</button>
+          <button
+            onClick={() => {
+              if (confirm('Apagar esse campo?')) onDelete();
+            }}
+            className="btn-ghost btn-sm text-xs text-[rgb(var(--danger))]"
+            title="Apagar (⌫)"
+          >×</button>
+        </div>
       </div>
 
-      <div className="text-[11px] text-[rgb(var(--fg-subtle))] uppercase tracking-wider">{field.type}</div>
+      <div className="text-[11px] text-[rgb(var(--fg-subtle))] uppercase tracking-wider">{field.type}{field.locked && ' · bloqueado'}</div>
 
       {field.type === 'text' && (
         <Section label="Texto">
-          <textarea
-            className="input w-full"
-            rows={2}
-            value={field.content ?? ''}
-            onChange={(e) => onChange({ content: e.target.value })}
-          />
+          <textarea className="input w-full" rows={2} value={field.content ?? ''} onChange={(e) => onChange({ content: e.target.value })} onBlur={onCommit} />
         </Section>
       )}
 
@@ -459,7 +731,7 @@ function FieldInspector({
             label="Subir PNG/SVG"
             accept="image/png,image/svg+xml,image/jpeg,image/webp"
             kind="logo"
-            onUploadDone={(url) => onChange({ src: url })}
+            onUploadDone={(url) => { onChange({ src: url }); onCommit(); }}
           />
           {field.src && (
             <div className="mt-2 text-[10px] text-[rgb(var(--fg-subtle))] truncate">{field.src}</div>
@@ -469,10 +741,19 @@ function FieldInspector({
 
       <Section label="Posição & tamanho">
         <div className="grid grid-cols-2 gap-2">
-          <NumField label="X %" value={field.x} onChange={(v) => onChange({ x: v })} />
-          <NumField label="Y %" value={field.y} onChange={(v) => onChange({ y: v })} />
-          <NumField label="W %" value={field.w} onChange={(v) => onChange({ w: v })} />
-          <NumField label="H %" value={field.h} onChange={(v) => onChange({ h: v })} />
+          <NumField label="X %" value={field.x} onChange={(v) => onChange({ x: v })} onCommit={onCommit} />
+          <NumField label="Y %" value={field.y} onChange={(v) => onChange({ y: v })} onCommit={onCommit} />
+          <NumField label="W %" value={field.w} onChange={(v) => onChange({ w: v })} onCommit={onCommit} />
+          <NumField label="H %" value={field.h} onChange={(v) => onChange({ h: v })} onCommit={onCommit} />
+        </div>
+      </Section>
+
+      <Section label="Camadas">
+        <div className="grid grid-cols-2 gap-1">
+          <button onClick={() => onMoveZ('front')} className="btn-secondary btn-sm text-xs">⤒ Frente</button>
+          <button onClick={() => onMoveZ('forward')} className="btn-secondary btn-sm text-xs">↑ +1</button>
+          <button onClick={() => onMoveZ('backward')} className="btn-secondary btn-sm text-xs">↓ -1</button>
+          <button onClick={() => onMoveZ('back')} className="btn-secondary btn-sm text-xs">⤓ Fundo</button>
         </div>
       </Section>
 
@@ -482,25 +763,28 @@ function FieldInspector({
             <select
               className="input w-full"
               value={field.style?.fontFamily ?? 'Inter'}
-              onChange={(e) => onChange({ style: { ...field.style, fontFamily: e.target.value } })}
+              onChange={(e) => { onChange({ style: { ...field.style, fontFamily: e.target.value } }); onCommit(); }}
+              style={{ fontFamily: field.style?.fontFamily ?? 'Inter' }}
             >
-              {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+              {allFonts.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
             </select>
             <div className="grid grid-cols-2 gap-2 mt-2">
-              <NumField label="Tamanho pt" value={field.style?.fontSize ?? 12} onChange={(v) => onChange({ style: { ...field.style, fontSize: v } })} />
-              <NumField label="Peso" value={(field.style?.fontWeight as number) ?? 400} onChange={(v) => onChange({ style: { ...field.style, fontWeight: v } })} step={100} min={100} max={900} />
+              <NumField label="Tamanho pt" value={field.style?.fontSize ?? 12} onChange={(v) => onChange({ style: { ...field.style, fontSize: v } })} onCommit={onCommit} />
+              <NumField label="Peso" value={(field.style?.fontWeight as number) ?? 400} onChange={(v) => onChange({ style: { ...field.style, fontWeight: v } })} onCommit={onCommit} step={100} min={100} max={900} />
             </div>
             <div className="flex items-center gap-2 mt-2">
               <input
                 type="color"
                 value={field.style?.color ?? '#000000'}
                 onChange={(e) => onChange({ style: { ...field.style, color: e.target.value } })}
+                onBlur={onCommit}
                 className="w-8 h-8 rounded border border-[rgb(var(--border))] cursor-pointer"
               />
               <input
                 type="text"
                 value={field.style?.color ?? '#000000'}
                 onChange={(e) => onChange({ style: { ...field.style, color: e.target.value } })}
+                onBlur={onCommit}
                 className="input flex-1 font-mono text-xs"
               />
             </div>
@@ -511,7 +795,7 @@ function FieldInspector({
               {(['left', 'center', 'right'] as const).map((a) => (
                 <button
                   key={a}
-                  onClick={() => onChange({ style: { ...field.style, align: a } })}
+                  onClick={() => { onChange({ style: { ...field.style, align: a } }); onCommit(); }}
                   className={`btn-sm flex-1 ${field.style?.align === a ? 'btn-primary' : 'btn-secondary'}`}
                 >
                   {a === 'left' ? '⬅' : a === 'center' ? '⬌' : '➡'}
@@ -522,9 +806,9 @@ function FieldInspector({
 
           <Section label="Estilo">
             <div className="flex flex-wrap gap-1">
-              <ToggleBtn active={!!field.style?.italic} onClick={() => onChange({ style: { ...field.style, italic: !field.style?.italic } })}>I</ToggleBtn>
-              <ToggleBtn active={!!field.style?.uppercase} onClick={() => onChange({ style: { ...field.style, uppercase: !field.style?.uppercase } })}>AA</ToggleBtn>
-              <ToggleBtn active={!!field.style?.underline} onClick={() => onChange({ style: { ...field.style, underline: !field.style?.underline } })}>U</ToggleBtn>
+              <ToggleBtn active={!!field.style?.italic} onClick={() => { onChange({ style: { ...field.style, italic: !field.style?.italic } }); onCommit(); }}>I</ToggleBtn>
+              <ToggleBtn active={!!field.style?.uppercase} onClick={() => { onChange({ style: { ...field.style, uppercase: !field.style?.uppercase } }); onCommit(); }}>AA</ToggleBtn>
+              <ToggleBtn active={!!field.style?.underline} onClick={() => { onChange({ style: { ...field.style, underline: !field.style?.underline } }); onCommit(); }}>U</ToggleBtn>
             </div>
           </Section>
         </>
@@ -532,8 +816,6 @@ function FieldInspector({
     </div>
   );
 }
-
-/* ===== small components ===== */
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -544,7 +826,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function NumField({ label, value, onChange, step = 1, min, max }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number }) {
+function NumField({ label, value, onChange, onCommit, step = 1, min, max }: { label: string; value: number; onChange: (v: number) => void; onCommit?: () => void; step?: number; min?: number; max?: number }) {
   return (
     <label className="block">
       <span className="text-[10px] text-[rgb(var(--fg-muted))]">{label}</span>
@@ -555,6 +837,7 @@ function NumField({ label, value, onChange, step = 1, min, max }: { label: strin
         min={min}
         max={max}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onBlur={onCommit}
         className="input w-full text-xs"
       />
     </label>
@@ -563,11 +846,7 @@ function NumField({ label, value, onChange, step = 1, min, max }: { label: strin
 
 function ToggleBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      onClick={onClick}
-      className={`btn-sm ${active ? 'btn-primary' : 'btn-secondary'}`}
-      style={{ minWidth: 36 }}
-    >
+    <button onClick={onClick} className={`btn-sm ${active ? 'btn-primary' : 'btn-secondary'}`} style={{ minWidth: 36 }}>
       {children}
     </button>
   );
@@ -633,6 +912,7 @@ function FileDropZone({
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) handle(f);
+          if (inputRef.current) inputRef.current.value = '';
         }}
       />
     </div>
