@@ -68,6 +68,17 @@ export async function getCustomHostname(id: string): Promise<CustomHostname | nu
   return data.result;
 }
 
+export async function findCustomHostnameByName(hostname: string): Promise<CustomHostname | null> {
+  const { apiToken, zoneId } = getCfCredentials();
+  const resp = await fetch(
+    `${CF_API}/zones/${zoneId}/custom_hostnames?hostname=${encodeURIComponent(hostname)}`,
+    { headers: { Authorization: `Bearer ${apiToken}` } },
+  );
+  if (!resp.ok) return null;
+  const data = (await resp.json()) as any;
+  return data.result?.[0] ?? null;
+}
+
 export async function deleteCustomHostname(id: string): Promise<boolean> {
   const { apiToken, zoneId } = getCfCredentials();
   const resp = await fetch(`${CF_API}/zones/${zoneId}/custom_hostnames/${id}`, {

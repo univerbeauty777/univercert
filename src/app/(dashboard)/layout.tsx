@@ -26,6 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <NavLink href="/bulk">Bulk</NavLink>
               <NavLink href="/templates">Templates</NavLink>
               <NavLink href="/workflows">Workflows</NavLink>
+              <NavLink href="/team">Equipe</NavLink>
               <NavLink href="/integrations">Integrações</NavLink>
               <NavLink href="/billing">Billing</NavLink>
               <NavLink href="/domain">Domínio</NavLink>

@@ -304,6 +304,29 @@ export const accounts = sqliteTable(
   }),
 );
 
+// 18b. INVITES (Sprint 15 · convite de usuário a workspace)
+export const invites = sqliteTable(
+  'invites',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role', { enum: ['admin', 'editor', 'aprovador', 'viewer'] }).notNull(),
+    token: text('token').notNull().unique(),
+    invitedByUserId: text('invited_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    expiresAt: integer('expires_at').notNull(),
+    acceptedAt: integer('accepted_at'),
+    acceptedByUserId: text('accepted_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    revokedAt: integer('revoked_at'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    workspaceIdx: index('idx_invites_workspace').on(t.workspaceId, t.acceptedAt),
+    emailIdx: index('idx_invites_email').on(t.email, t.acceptedAt),
+    tokenIdx: index('idx_invites_token').on(t.token),
+  }),
+);
+
 // 18. WORKFLOWS (Sprint 17 · custom email/WhatsApp templates)
 export const workflows = sqliteTable(
   'workflows',

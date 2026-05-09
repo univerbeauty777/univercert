@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import WhatsAppFAB from '@/components/WhatsAppFAB';
+import PwaInstallPrompt from '@/components/PwaInstallPrompt';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 // Cloudflare Pages exige edge runtime
 export const runtime = 'edge';
@@ -133,6 +135,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <WhatsAppFAB />
+        <PwaInstallPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
