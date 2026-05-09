@@ -166,16 +166,16 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     setErrorMsg(null);
     try {
       const r = await onSave(layout, name);
-      if (r.ok) {
+      if (r && r.ok) {
         setSaveState('saved');
         setTimeout(() => setSaveState('idle'), 2500);
       } else {
         setSaveState('error');
-        setErrorMsg(r.error ?? 'erro ao salvar');
+        setErrorMsg((r && r.error) ?? 'erro ao salvar (resposta vazia)');
       }
     } catch (e) {
       setSaveState('error');
-      setErrorMsg((e as Error).message);
+      setErrorMsg((e as Error)?.message ?? 'erro desconhecido');
     }
   };
 

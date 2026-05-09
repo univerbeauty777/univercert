@@ -6,6 +6,7 @@ import { getDb } from '@/db/client';
 import { templates } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { requireRole, RbacError } from '@/lib/rbac';
+import { captureError } from '@/lib/observability';
 import type { LayoutV2 } from '@/lib/layout-v2';
 
 export async function saveTemplateV2Action(args: {
@@ -58,6 +59,17 @@ export async function saveTemplateV2Action(args: {
     return { ok: true as const, templateId: id };
   } catch (e) {
     if (e instanceof RbacError) return { ok: false as const, error: 'sem permissao (editor+)' };
-    return { ok: false as const, error: (e as Error).message };
+    // Captura no admin/health pra debug
+    try {
+      await captureError({
+        path: '/templates/editor/saveTemplateV2Action',
+        method: 'POST',
+        error: e as Error,
+        metadata: { templateId: args.templateId, name: args.name, layoutFieldCount: args.layout?.fields?.length },
+      });
+    } catch {}
+    // eslint-disable-next-line no-console
+    console.error('[saveTemplateV2Action] crash:', (e as Error)?.message, (e as Error)?.stack);
+    return { ok: false as const, error: (e as Error)?.message ?? 'erro interno' };
   }
 }
