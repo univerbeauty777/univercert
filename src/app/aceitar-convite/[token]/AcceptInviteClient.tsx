@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { acceptInviteAction } from '@/app/(dashboard)/team/actions';
-import { ROLE_LABELS } from '@/lib/rbac';
+import { ROLE_LABELS } from '@/lib/rbac-types';
 
 type Role = 'admin' | 'editor' | 'aprovador' | 'viewer';
 

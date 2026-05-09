@@ -506,7 +506,6 @@ export default async function ComparisonPage({ params }: Params) {
   );
 }
 
-// SSG hint pra SEO — Next.js 15 vai pré-renderizar essas rotas
-export async function generateStaticParams() {
-  return Object.keys(COMPARISONS).map((competitor) => ({ competitor }));
-}
+// Sprint 19 fix: edge runtime + generateStaticParams são incompatíveis no Next 15.
+// Mantemos edge p/ Cloudflare Pages e fazemos lookup dinâmico (COMPARISONS é em memória).
+// Removendo `export const runtime = 'edge'` permite SSG, mas perde benefícios do edge.

@@ -4,7 +4,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ROLE_LABELS } from '@/lib/rbac';
+import { ROLE_LABELS } from '@/lib/rbac-types';
 import { inviteUserAction, revokeInviteAction, removeUserAction, changeRoleAction } from './actions';
 import EmptyState from '@/components/EmptyState';
 
