@@ -35,27 +35,22 @@ export default async function TemplatesPage() {
   const workspaceName = ws?.workspace?.name ?? 'UniverCert';
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8 px-6">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader
-          icon="🎨"
-          title="Templates de certificado"
-          subtitle={`${CERT_VARIANTS.length} variantes premium · ${customTemplates.length} customizado${customTemplates.length !== 1 ? 's' : ''} · personalize cores ou crie do zero`}
-          actions={
-            <a href="/templates/new" className="btn-gradient text-sm">
-              ✏ Criar template do zero
-            </a>
-          }
-        />
+    <main className="page">
+      <PageHeader
+        title="Templates de certificado"
+        subtitle={`${CERT_VARIANTS.length} variantes premium · ${customTemplates.length} customizado${customTemplates.length !== 1 ? 's' : ''} · personalize cores ou crie do zero`}
+        actions={
+          <a href="/templates/new" className="btn-primary btn-sm">+ Novo template</a>
+        }
+      />
 
-        <TemplatesGalleryClient
-          variants={CERT_VARIANTS as any}
-          customTemplates={customTemplates.map((t) => ({ id: t.id, name: t.name, vertical: t.vertical ?? 'livre' }))}
-          initialPrimary={initialPrimary}
-          initialAccent={initialAccent}
-          workspaceName={workspaceName}
-        />
-      </div>
+      <TemplatesGalleryClient
+        variants={CERT_VARIANTS as any}
+        customTemplates={customTemplates.map((t) => ({ id: t.id, name: t.name, vertical: t.vertical ?? 'livre' }))}
+        initialPrimary={initialPrimary}
+        initialAccent={initialAccent}
+        workspaceName={workspaceName}
+      />
     </main>
   );
 }

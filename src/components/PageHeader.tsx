@@ -1,27 +1,27 @@
-// UniverCert · PageHeader · GODMODE pattern
+// UniverCert · PageHeader GODMODE 2.0 — minimalista, sem ícone gradient
 
 type Props = {
-  icon: string;
+  icon?: string;
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  badge?: React.ReactNode;
 };
 
-export default function PageHeader({ icon, title, subtitle, actions }: Props) {
+export default function PageHeader({ icon, title, subtitle, actions, badge }: Props) {
   return (
-    <div className="flex items-center justify-between mb-6 flex-wrap gap-3 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-accent flex items-center justify-center text-white text-xl shadow-glow-primary">
-          {icon}
+    <header className="page-header animate-fade-in">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          {icon && (
+            <span className="text-lg leading-none opacity-70" aria-hidden>{icon}</span>
+          )}
+          <h1 className="page-title">{title}</h1>
+          {badge}
         </div>
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight leading-tight text-ink-900">
-            {title}
-          </h1>
-          {subtitle && <p className="text-xs text-ink-500 mt-0.5">{subtitle}</p>}
-        </div>
+        {subtitle && <p className="page-subtitle">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
-    </div>
+      {actions && <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>}
+    </header>
   );
 }

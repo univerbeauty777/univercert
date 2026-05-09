@@ -1,66 +1,56 @@
-// UniverCert · dashboard shell
+// UniverCert · Dashboard shell GODMODE 2.0 — sidebar fixa colapsável
 
-import Logo from '@/components/Logo';
-import DarkModeToggle from '@/components/DarkModeToggle';
+import { eq, and, count } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { workspaces, certificateRequests } from '@/db/schema';
+import Sidebar from '@/components/Sidebar';
 
 export const runtime = 'edge';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-ink-900">
-      <header className="bg-white/80 dark:bg-ink-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-ink-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-7">
-            <a href="/" className="flex items-center gap-2 group">
-              <Logo size={36} className="group-hover:scale-105 transition-transform" />
-              <span className="font-extrabold tracking-tight">
-                <span className="text-primary">univer</span>
-                <span className="text-accent">CERT</span>
-              </span>
-            </a>
-            <nav className="hidden lg:flex gap-0.5 text-sm font-semibold text-ink-500">
-              <NavLink href="/dashboard">Visão geral</NavLink>
-              <NavLink href="/queue">Fila</NavLink>
-              <NavLink href="/credentials">Certificados</NavLink>
-              <NavLink href="/recipients">Alunos</NavLink>
-              <NavLink href="/bulk">Bulk</NavLink>
-              <NavLink href="/templates">Templates</NavLink>
-              <NavLink href="/workflows">Workflows</NavLink>
-              <NavLink href="/team">Equipe</NavLink>
-              <NavLink href="/integrations">Integrações</NavLink>
-              <NavLink href="/billing">Billing</NavLink>
-              <NavLink href="/domain">Domínio</NavLink>
-              <NavLink href="/reseller">Reseller</NavLink>
-            </nav>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-ink-500 dark:text-ink-400 px-2 py-1 bg-gray-100 dark:bg-ink-700 rounded-full font-bold uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-success" /> UniverHair
-            </div>
-            <DarkModeToggle />
-            <a href="/audit" className="text-ink-500 hover:text-primary p-1.5 rounded-lg hover:bg-gray-100 transition" title="Audit log">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-            </a>
-            <form action="/api/auth/sign-out" method="POST" className="inline">
-              <button type="submit" className="text-xs text-ink-500 hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger-soft transition font-medium" title="Sair">Sair</button>
-            </form>
-          </div>
-        </div>
-      </header>
-      {children}
-    </div>
-  );
+async function getShellData() {
+  try {
+    const db = getDb();
+    const slug = 'univerhair';
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+    if (!ws) return { workspaceName: 'UniverCert', pendingCount: 0 };
+    const [pending] = await db
+      .select({ value: count() })
+      .from(certificateRequests)
+      .where(and(eq(certificateRequests.workspaceId, ws.id), eq(certificateRequests.status, 'pending')));
+    return { workspaceName: ws.name, pendingCount: pending?.value ?? 0 };
+  } catch {
+    return { workspaceName: 'UniverCert', pendingCount: 0 };
+  }
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { workspaceName, pendingCount } = await getShellData();
   return (
-    <a href={href} className="px-3 py-2 rounded-lg hover:bg-primary-soft hover:text-primary-dark transition-colors">
-      {children}
-    </a>
+    <div className="min-h-screen bg-[rgb(var(--bg))] text-[rgb(var(--fg))]">
+      <Sidebar workspaceName={workspaceName} pendingCount={pendingCount} />
+      <div className="with-sidebar min-h-screen flex flex-col" id="uc-main">
+        {children}
+      </div>
+      {/* Sincroniza padding-left do main com estado collapsed da sidebar */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function(){
+              try {
+                var collapsed = localStorage.getItem('uc_sidebar_collapsed') === '1';
+                var main = document.getElementById('uc-main');
+                if (main && collapsed) main.classList.add('collapsed');
+                document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+              } catch(e){}
+            })();
+          `,
+        }}
+      />
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `html.sidebar-collapsed #uc-main { padding-left: var(--sidebar-collapsed-w); }`,
+        }}
+      />
+    </div>
   );
 }
