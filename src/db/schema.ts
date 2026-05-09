@@ -304,6 +304,30 @@ export const accounts = sqliteTable(
   }),
 );
 
+// 18. WORKFLOWS (Sprint 17 · custom email/WhatsApp templates)
+export const workflows = sqliteTable(
+  'workflows',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    channel: text('channel', { enum: ['email', 'whatsapp'] }).notNull(),
+    triggerEvent: text('trigger_event', { enum: ['credential.issued', 'credential.revoked', 'request.created', 'nps.d7'] }).notNull(),
+    subject: text('subject'),
+    bodyTemplate: text('body_template').notNull(),
+    isActive: integer('is_active').notNull().default(1),
+    delaySeconds: integer('delay_seconds').notNull().default(0),
+    abSubjectB: text('ab_subject_b'),
+    metadataJson: text('metadata_json'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    workspaceTriggerIdx: index('idx_workflows_workspace').on(t.workspaceId, t.triggerEvent, t.isActive),
+    workspaceChannelIdx: index('idx_workflows_workspace_channel').on(t.workspaceId, t.channel),
+  }),
+);
+
 // 17. VERIFICATIONS (Better Auth · email confirm, password reset)
 export const verifications = sqliteTable(
   'verifications',

@@ -63,6 +63,7 @@ export default function Footer() {
             <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4">Começar</h4>
             <ul className="space-y-2 text-xs">
               <FooterLink href="/demo">🧪 Demo · sem cadastro</FooterLink>
+              <FooterLink href="/verificar">🔐 Verificar certificado</FooterLink>
               <FooterLink href="/sign-up">Criar conta grátis</FooterLink>
               <FooterLink href="/uh/solicitar">Pedir certificado</FooterLink>
               <FooterLink href="https://developer.univercert.com.br">API Docs</FooterLink>

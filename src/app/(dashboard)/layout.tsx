@@ -1,13 +1,14 @@
 // UniverCert · dashboard shell
 
 import Logo from '@/components/Logo';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 export const runtime = 'edge';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-ink-900">
+      <header className="bg-white/80 dark:bg-ink-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-ink-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-7">
             <a href="/" className="flex items-center gap-2 group">
@@ -24,16 +25,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <NavLink href="/recipients">Alunos</NavLink>
               <NavLink href="/bulk">Bulk</NavLink>
               <NavLink href="/templates">Templates</NavLink>
+              <NavLink href="/workflows">Workflows</NavLink>
               <NavLink href="/integrations">Integrações</NavLink>
               <NavLink href="/billing">Billing</NavLink>
               <NavLink href="/domain">Domínio</NavLink>
               <NavLink href="/reseller">Reseller</NavLink>
             </nav>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-ink-500 px-2 py-1 bg-gray-100 rounded-full font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-ink-500 dark:text-ink-400 px-2 py-1 bg-gray-100 dark:bg-ink-700 rounded-full font-bold uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-success" /> UniverHair
             </div>
+            <DarkModeToggle />
             <a href="/audit" className="text-ink-500 hover:text-primary p-1.5 rounded-lg hover:bg-gray-100 transition" title="Audit log">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />

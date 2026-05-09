@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==================== DESIGN TOKENS · DARK MODE ==================== */
+:root {
+  --bg: 255 255 255;
+  --bg-elevated: 255 255 255;
+  --bg-muted: 249 250 251;
+  --fg: 10 14 26;
+  --fg-muted: 107 114 128;
+  --fg-subtle: 156 163 175;
+  --border: 229 231 235;
+  --border-strong: 209 213 219;
+  --primary-accent: 27 45 94;
+  --gold-accent: 212 169 55;
+}
+.dark {
+  --bg: 10 14 26;
+  --bg-elevated: 17 24 39;
+  --bg-muted: 31 41 55;
+  --fg: 243 244 246;
+  --fg-muted: 156 163 175;
+  --fg-subtle: 107 114 128;
+  --border: 55 65 81;
+  --border-strong: 75 85 99;
+  --primary-accent: 130 145 200;
+  --gold-accent: 232 191 79;
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -9,15 +35,20 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: 'kern', 'liga', 'calt', 'ss01';
+    color-scheme: light dark;
   }
-  body { @apply bg-white text-ink-900; }
-  ::selection { background: rgba(27,45,94,0.18); color: rgb(31,41,55); }
+  body {
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  ::selection { background: rgba(212,169,55,0.25); color: rgb(var(--fg)); }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.1); border-radius: 10px;
+    background: rgba(var(--fg), 0.15); border-radius: 10px;
     border: 2px solid transparent; background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(var(--fg), 0.25); background-clip: padding-box; }
 }
 
 @layer components {
@@ -45,18 +76,29 @@
     box-shadow: 0 12px 32px -4px rgba(236,72,153,0.45), inset 0 1px 0 0 rgba(255,255,255,0.20);
   }
   .btn-secondary {
-    @apply btn bg-white text-ink-700 border border-gray-200;
+    @apply btn;
+    background: rgb(var(--bg-elevated));
+    color: rgb(var(--fg));
+    border: 1px solid rgb(var(--border));
     box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
   }
   .btn-secondary:hover {
-    @apply border-gray-300 bg-gray-50;
     transform: translateY(-1px);
+    border-color: rgb(var(--border-strong));
+    background: rgb(var(--bg-muted));
     box-shadow: 0 4px 8px -2px rgba(0,0,0,0.06);
   }
-  .btn-ghost { @apply btn text-ink-700 hover:bg-gray-100; }
+  .btn-ghost {
+    @apply btn;
+    color: rgb(var(--fg));
+  }
+  .btn-ghost:hover { background: rgb(var(--bg-muted)); }
 
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white text-ink-900 transition-all duration-150;
+    @apply w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-150;
+    background: rgb(var(--bg-elevated));
+    color: rgb(var(--fg));
+    border: 1px solid rgb(var(--border));
   }
   .input:focus { @apply outline-none border-primary; box-shadow: 0 0 0 4px rgba(27,45,94,0.12); }
   .input::placeholder { @apply text-gray-400; }
@@ -66,19 +108,25 @@
   }
 
   .card {
-    @apply bg-white border border-gray-200 rounded-2xl p-6 transition-all duration-200;
+    @apply rounded-2xl p-6 transition-all duration-200;
+    background: rgb(var(--bg-elevated));
+    color: rgb(var(--fg));
+    border: 1px solid rgb(var(--border));
     box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04);
   }
+  .dark .card { box-shadow: 0 1px 3px 0 rgba(0,0,0,0.40); }
   .card-hover { @apply card hover:border-primary/30 hover:-translate-y-0.5; }
   .card-hover:hover { box-shadow: 0 10px 30px -10px rgba(27,45,94,0.18); }
   .card-glass {
     @apply rounded-2xl p-6 transition-all duration-200;
-    background: rgba(255,255,255,0.65);
-    border: 1px solid rgba(255,255,255,0.8);
+    background: rgba(var(--bg-elevated), 0.65);
+    color: rgb(var(--fg));
+    border: 1px solid rgba(var(--bg-elevated), 0.8);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     box-shadow: 0 8px 32px 0 rgba(31,38,135,0.08);
   }
+  .dark .card-glass { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.30); border-color: rgba(255,255,255,0.08); }
 
   .text-gradient {
     background: linear-gradient(135deg, #1B2D5E 0%, #2A4080 50%, #D4A937 100%);

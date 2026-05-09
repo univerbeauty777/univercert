@@ -7,6 +7,7 @@ import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces, brandKits, verifyLogs } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import Logo from '@/components/Logo';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 export const runtime = 'edge';
 
@@ -111,8 +112,11 @@ export default async function VerifyPage({ params }: Params) {
               <div className="text-[10px] text-ink-500 uppercase tracking-wider font-bold mt-0.5">Certificação Digital</div>
             </div>
           </a>
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-bold uppercase tracking-wider shadow-card ${status.cls}`}>
-            <span className="text-[14px] leading-none">{status.icon}</span> {status.label}
+          <div className="flex items-center gap-2">
+            <DarkModeToggle size="sm" />
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-bold uppercase tracking-wider shadow-card ${status.cls}`}>
+              <span className="text-[14px] leading-none">{status.icon}</span> {status.label}
+            </div>
           </div>
         </header>
 

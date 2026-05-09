@@ -2,13 +2,14 @@
 
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 export const runtime = 'edge';
 
 export default function HomePage() {
   return (
-    <main className="bg-white relative overflow-x-clip">
-      <nav className="sticky top-0 z-50 bg-white/75 backdrop-blur-xl border-b border-gray-100">
+    <main className="bg-white dark:bg-ink-900 relative overflow-x-clip">
+      <nav className="sticky top-0 z-50 bg-white/75 dark:bg-ink-900/75 backdrop-blur-xl border-b border-gray-100 dark:border-ink-700">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5 group">
             <Logo size={40} className="group-hover:scale-105 transition-transform drop-shadow-md" />
@@ -24,8 +25,9 @@ export default function HomePage() {
             <a href="/roi" className="hover:text-primary transition">ROI</a>
             <a href="#faq" className="hover:text-primary transition">FAQ</a>
           </nav>
-          <div className="flex gap-2 items-center">
-            <a href="/sign-in" className="hidden sm:inline text-sm text-ink-700 hover:text-primary px-3 font-medium">Entrar</a>
+          <div className="flex gap-1 items-center">
+            <DarkModeToggle size="sm" />
+            <a href="/sign-in" className="hidden sm:inline text-sm text-ink-700 dark:text-ink-300 hover:text-primary dark:hover:text-accent px-3 font-medium">Entrar</a>
             <a href="/sign-up" className="btn-primary text-sm">Começar grátis</a>
           </div>
         </div>

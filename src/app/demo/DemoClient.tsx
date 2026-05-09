@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Logo from '@/components/Logo';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 type Step = 'nome' | 'curso' | 'loading';
 
@@ -66,9 +67,12 @@ export default function DemoClient() {
             <span className="text-accent">CERT</span>
           </span>
         </a>
-        <a href="/sign-up" className="text-xs md:text-sm text-ink-700 hover:text-primary px-4 py-2 rounded-lg hover:bg-white/60 transition font-medium">
-          Já quero criar conta →
-        </a>
+        <div className="flex items-center gap-2">
+          <DarkModeToggle size="sm" />
+          <a href="/sign-up" className="text-xs md:text-sm text-ink-700 dark:text-ink-300 hover:text-primary dark:hover:text-accent px-4 py-2 rounded-lg hover:bg-white/60 dark:hover:bg-ink-700/60 transition font-medium">
+            Já quero criar conta →
+          </a>
+        </div>
       </nav>
 
       <div className="relative z-10 max-w-2xl mx-auto px-5 pt-6 md:pt-12 pb-20">
