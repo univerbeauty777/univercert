@@ -5,7 +5,8 @@
 // font upload · duplicate · lock toggle · snap guides centro/edges.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation } from '@/lib/layout-v2';
+import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation, PageSizeName } from '@/lib/layout-v2';
+import { getPageDimensions } from '@/lib/layout-v2';
 import { pdfFileToPngBlob, detectOrientation } from '@/lib/pdf-to-png';
 import { useLayoutHistory } from '@/lib/editor-history';
 
@@ -382,9 +383,11 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   };
 
   const isLandscape = layout.orientation === 'landscape';
-  const canvasStyle: React.CSSProperties = isLandscape
-    ? { width: 297 * zoom * 3.78, height: 210 * zoom * 3.78 }
-    : { width: 210 * zoom * 3.78, height: 297 * zoom * 3.78 };
+  const pageDims = getPageDimensions(layout);
+  const canvasStyle: React.CSSProperties = {
+    width: pageDims.w * zoom * 3.78,
+    height: pageDims.h * zoom * 3.78,
+  };
 
   const allFonts = [...BUILTIN_FONTS, ...customFonts.map((f) => f.family)];
 
@@ -444,10 +447,64 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
         </div>
 
         <div className="mt-5 pt-4 border-t border-[rgb(var(--border))]">
-          <h3 className="text-sm font-semibold mb-2">Layout</h3>
-          <button onClick={toggleOrientation} className="btn-secondary btn-sm w-full text-xs">
-            {isLandscape ? '↻ Landscape (A4)' : '↻ Portrait (A4)'}
-          </button>
+          <h3 className="text-sm font-semibold mb-2">Tamanho da página</h3>
+          <select
+            className="input w-full text-xs mb-2"
+            value={layout.pageSize ?? 'A4'}
+            onChange={(e) => {
+              const pageSize = e.target.value as PageSizeName;
+              setLayout((l) => ({ ...l, pageSize }));
+              commit();
+            }}
+          >
+            <option value="A4">A4 (297×210mm)</option>
+            <option value="Letter">Letter (279×216mm)</option>
+            <option value="A3">A3 (420×297mm)</option>
+            <option value="Square">Quadrado (210×210mm)</option>
+            <option value="Custom">Custom…</option>
+          </select>
+
+          {layout.pageSize === 'Custom' && (
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <label className="block">
+                <span className="text-[10px] text-[rgb(var(--fg-muted))]">Largura mm</span>
+                <input
+                  type="number"
+                  className="input text-xs w-full"
+                  value={layout.customWidth ?? 210}
+                  onChange={(e) => { setLayout((l) => ({ ...l, customWidth: Number(e.target.value) || 210 })); }}
+                  onBlur={commit}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] text-[rgb(var(--fg-muted))]">Altura mm</span>
+                <input
+                  type="number"
+                  className="input text-xs w-full"
+                  value={layout.customHeight ?? 297}
+                  onChange={(e) => { setLayout((l) => ({ ...l, customHeight: Number(e.target.value) || 297 })); }}
+                  onBlur={commit}
+                />
+              </label>
+            </div>
+          )}
+
+          {layout.pageSize !== 'Square' && layout.pageSize !== 'Custom' && (
+            <button onClick={toggleOrientation} className="btn-secondary btn-sm w-full text-xs">
+              {isLandscape ? '↻ Landscape' : '↻ Portrait'}
+            </button>
+          )}
+
+          {templateId && (
+            <a
+              href={`/api/v1/templates/custom/${templateId}/preview`}
+              target="_blank"
+              rel="noopener"
+              className="btn-secondary btn-sm w-full text-xs mt-2 justify-center"
+            >
+              👁 Preview real
+            </a>
+          )}
         </div>
 
         <div className="mt-5 pt-4 border-t border-[rgb(var(--border))]">
@@ -526,6 +583,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
                 onClick={(e) => { e.stopPropagation(); setSelectedId(f.id); }}
                 onDragStart={(e) => handleDrag(f.id, e)}
                 onResizeStart={(dir, e) => handleResize(f.id, dir as any, e)}
+                onInlineEdit={(content) => { updateField(f.id, { content }); commit(); }}
               />
             ))}
           </div>
@@ -578,29 +636,39 @@ function defaultLayout(): LayoutV2 {
 }
 
 function FieldOnCanvas({
-  field, selected, onClick, onDragStart, onResizeStart,
+  field, selected, onClick, onDragStart, onResizeStart, onInlineEdit,
 }: {
   field: LayoutField;
   selected: boolean;
   onClick: (e: React.MouseEvent) => void;
   onDragStart: (e: React.MouseEvent) => void;
   onResizeStart: (dir: string, e: React.MouseEvent) => void;
+  onInlineEdit?: (newContent: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const sample = previewContent(field);
+  const isHidden = field.style?.hidden;
+  // AutoFit: usa CSS clamp via cqh (container query height) — sempre cabe na altura
+  const autoFitCss: React.CSSProperties = field.style?.autoFit
+    ? { fontSize: 'clamp(6px, 60cqh, 200px)', lineHeight: 1 }
+    : { fontSize: field.style?.fontSize ? `${field.style.fontSize}pt` : '12pt' };
+
   const css: React.CSSProperties = {
     position: 'absolute',
     left: `${field.x}%`,
     top: `${field.y}%`,
     width: `${field.w}%`,
     height: `${field.h}%`,
-    border: selected ? '2px solid #1B2D5E' : '1px dashed rgba(0,0,0,0.18)',
+    containerType: 'size',                           // habilita cqh
+    border: selected ? '2px solid #1B2D5E' : isHidden ? '1px dashed rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.18)',
     background: selected ? 'rgba(27,45,94,0.05)' : 'transparent',
+    opacity: isHidden ? 0.4 : 1,
     cursor: field.locked ? 'not-allowed' : 'move',
     display: 'flex',
     alignItems: 'center',
     justifyContent: field.style?.align === 'right' ? 'flex-end' : field.style?.align === 'left' ? 'flex-start' : 'center',
     fontFamily: field.style?.fontFamily ?? 'Inter',
-    fontSize: field.style?.fontSize ? `${field.style.fontSize}pt` : '12pt',
+    ...autoFitCss,
     fontWeight: field.style?.fontWeight ?? 400,
     color: field.style?.color ?? '#000',
     fontStyle: field.style?.italic ? 'italic' : 'normal',
@@ -611,7 +679,7 @@ function FieldOnCanvas({
     padding: '0 4px',
     boxSizing: 'border-box',
     zIndex: field.z ?? 1,
-    userSelect: 'none',
+    userSelect: editing ? 'text' : 'none',
   };
 
   const inner = field.type === 'qr' ? (
@@ -620,6 +688,16 @@ function FieldOnCanvas({
     field.src
       ? <img src={field.src} alt="" style={{ width: '100%', height: '100%', objectFit: field.style?.fit ?? 'contain' }} />
       : <span style={{ fontSize: 11, color: '#999' }}>(imagem · upload no painel direito)</span>
+  ) : editing && field.type === 'text' ? (
+    <input
+      autoFocus
+      defaultValue={field.content ?? ''}
+      onBlur={(e) => { onInlineEdit?.(e.currentTarget.value); setEditing(false); }}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); if (e.key === 'Escape') setEditing(false); }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{ width: '100%', background: '#fff', border: '1px solid #1B2D5E', padding: '2px 4px', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 'inherit', color: 'inherit', textAlign: field.style?.align ?? 'center' }}
+    />
   ) : (
     <span style={{ width: '100%' }}>{sample}</span>
   );
@@ -628,7 +706,13 @@ function FieldOnCanvas({
     <div
       style={css}
       onClick={onClick}
-      onMouseDown={field.locked ? undefined : onDragStart}
+      onMouseDown={editing ? undefined : (field.locked ? undefined : onDragStart)}
+      onDoubleClick={(e) => {
+        if (field.type === 'text' && !field.locked) {
+          e.stopPropagation();
+          setEditing(true);
+        }
+      }}
     >
       {inner}
       {selected && !field.locked && (
@@ -754,6 +838,27 @@ function FieldInspector({
           <button onClick={() => onMoveZ('forward')} className="btn-secondary btn-sm text-xs">↑ +1</button>
           <button onClick={() => onMoveZ('backward')} className="btn-secondary btn-sm text-xs">↓ -1</button>
           <button onClick={() => onMoveZ('back')} className="btn-secondary btn-sm text-xs">⤓ Fundo</button>
+        </div>
+      </Section>
+
+      <Section label="Visibilidade & ajuste">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => { onChange({ style: { ...field.style, hidden: !field.style?.hidden } }); onCommit(); }}
+            className={`btn-sm flex-1 ${field.style?.hidden ? 'btn-primary' : 'btn-secondary'} text-xs`}
+            title="Esconder no canvas e no PDF final"
+          >
+            {field.style?.hidden ? '○ Oculto' : '● Visível'}
+          </button>
+          {field.type !== 'qr' && field.type !== 'image' && (
+            <button
+              onClick={() => { onChange({ style: { ...field.style, autoFit: !field.style?.autoFit } }); onCommit(); }}
+              className={`btn-sm flex-1 ${field.style?.autoFit ? 'btn-primary' : 'btn-secondary'} text-xs`}
+              title="Auto-fit: texto ajusta automático ao tamanho da caixa"
+            >
+              {field.style?.autoFit ? '⤢ Auto-fit' : '⤢ Auto-fit'}
+            </button>
+          )}
         </div>
       </Section>
 

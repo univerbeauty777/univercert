@@ -10,6 +10,16 @@
 
 export type Orientation = 'landscape' | 'portrait';
 
+export type PageSizeName = 'A4' | 'Letter' | 'A3' | 'Square' | 'Custom';
+
+export const PAGE_SIZES: Record<PageSizeName, { w: number; h: number }> = {
+  A4: { w: 297, h: 210 },        // mm (landscape default)
+  Letter: { w: 279, h: 216 },
+  A3: { w: 420, h: 297 },
+  Square: { w: 210, h: 210 },
+  Custom: { w: 210, h: 297 },     // default fallback
+};
+
 export type LayoutBackground = {
   type: 'image' | 'svg' | 'pdf' | 'color';
   /** Pra image/svg/pdf: URL do asset (rota /api/v1/assets/<key>). Pra color: '#hex' ou rgb(). */
@@ -49,6 +59,10 @@ export type FieldStyle = {
   underline?: boolean;
   /** Pra image fields: object-fit (default contain) */
   fit?: 'contain' | 'cover' | 'fill';
+  /** Auto-fit: recalcula fontSize baseado em altura da caixa em runtime (sem quebrar) */
+  autoFit?: boolean;
+  /** Visibilidade: false esconde no canvas+render */
+  hidden?: boolean;
 };
 
 export type LayoutField = {
@@ -71,7 +85,10 @@ export type LayoutField = {
 export type LayoutV2 = {
   version: 2;
   orientation: Orientation;
-  pageSize?: 'A4' | 'Letter';     // default A4
+  pageSize?: PageSizeName;        // default A4
+  /** Pra Custom: dimensoes em mm (caso pageSize === 'Custom') */
+  customWidth?: number;
+  customHeight?: number;
   background?: LayoutBackground;
   fields: LayoutField[];
   /** Metadata pra editor */
@@ -81,6 +98,18 @@ export type LayoutV2 = {
     importedFrom?: string;        // 'png' | 'pdf' | 'svg' | 'figma' | 'canva' | 'manual'
   };
 };
+
+/** Dimensoes em mm (W, H) considerando pageSize + orientation + custom */
+export function getPageDimensions(layout: Pick<LayoutV2, 'pageSize' | 'orientation' | 'customWidth' | 'customHeight'>): { w: number; h: number } {
+  const sizeName = layout.pageSize ?? 'A4';
+  if (sizeName === 'Custom') {
+    return { w: layout.customWidth ?? 210, h: layout.customHeight ?? 297 };
+  }
+  const base = PAGE_SIZES[sizeName];
+  // Pra A4/A3/Letter: orientation flip
+  if (sizeName === 'Square') return base;
+  return layout.orientation === 'portrait' ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
+}
 
 /* ============================================================
  * RENDERER
@@ -122,8 +151,13 @@ function styleString(s?: FieldStyle): string {
   return out.join('; ');
 }
 
-function fieldHtml(field: LayoutField, args: CertArgs): string {
+function fieldHtml(field: LayoutField, args: CertArgs, pageHeightMm: number): string {
+  if (field.style?.hidden) return '';
   const pos = `position:absolute; left:${field.x}%; top:${field.y}%; width:${field.w}%; height:${field.h}%; z-index:${field.z ?? 1};`;
+  // Auto-fit: fontSize = altura da caixa em mm * 0.55 * 2.835 (mm->pt) * 0.6 ajuste linha
+  const computedFontSize = field.style?.autoFit
+    ? Math.max(6, (field.h / 100) * pageHeightMm * 2.0)
+    : field.style?.fontSize;
 
   if (field.type === 'qr') {
     const src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&format=png&margin=2&data=${encodeURIComponent(args.verifyUrl)}`;
@@ -139,9 +173,11 @@ function fieldHtml(field: LayoutField, args: CertArgs): string {
   }
 
   const content = resolveContent(field, args);
-  const css = styleString(field.style);
+  const styleObj = { ...field.style };
+  if (computedFontSize != null) styleObj.fontSize = computedFontSize;
+  const css = styleString(styleObj);
   const flexAlign = field.style?.align === 'center' ? 'center' : field.style?.align === 'right' ? 'flex-end' : 'flex-start';
-  return `<div style="${pos} display:flex; align-items:center; justify-content:${flexAlign}; ${css}; box-sizing:border-box; padding:0 4px; word-break:break-word;">
+  return `<div style="${pos} display:flex; align-items:center; justify-content:${flexAlign}; ${css}; box-sizing:border-box; padding:0 4px; word-break:break-word; overflow:hidden;">
     <span style="display:inline-block; width:100%;">${escapeHtml(content)}</span>
   </div>`;
 }
@@ -163,11 +199,12 @@ function ensureQr(layout: LayoutV2): LayoutV2 {
 /** Renderiza HTML completo do certificado a partir do layout V2 */
 export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
   const layout = ensureQr(rawLayout);
+  const dims = getPageDimensions(layout);
   const isLandscape = layout.orientation === 'landscape';
   const pageSize = layout.pageSize ?? 'A4';
-  const dims = isLandscape ? '297mm 210mm' : '210mm 297mm';
-  const w = isLandscape ? '297mm' : '210mm';
-  const h = isLandscape ? '210mm' : '297mm';
+  const w = `${dims.w}mm`;
+  const h = `${dims.h}mm`;
+  const pageHeightMm = dims.h;
 
   const bg = layout.background;
   let bgStyle = 'background: #ffffff;';
@@ -185,6 +222,11 @@ export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
 
   const sortedFields = [...layout.fields].sort((a, b) => (a.z ?? 1) - (b.z ?? 1));
 
+  // @page rule: pra A4/A3/Letter usar nome+orientation; pra Square/Custom usar dimensoes em mm
+  const pageRule = pageSize === 'A4' || pageSize === 'A3' || pageSize === 'Letter'
+    ? `@page { size: ${pageSize} ${isLandscape ? 'landscape' : 'portrait'}; margin: 0; }`
+    : `@page { size: ${dims.w}mm ${dims.h}mm; margin: 0; }`;
+
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Certificado · ${escapeHtml(args.recipientName)}</title>
@@ -192,7 +234,7 @@ export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&family=Cinzel:wght@500;700&family=Archivo+Black&family=JetBrains+Mono&family=Dancing+Script&display=swap" rel="stylesheet">
 <style>
-@page { size: ${pageSize} ${isLandscape ? 'landscape' : 'portrait'}; margin: 0; }
+${pageRule}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: ${w}; height: ${h}; }
 body { font-family: 'Inter', sans-serif; color: #0A0E1A; position: relative; overflow: hidden; -webkit-font-smoothing: antialiased; ${bgStyle} }
@@ -206,7 +248,7 @@ ${bg && bg.type === 'pdf' ? `
 <body>
 ${bg && bg.type === 'pdf' ? `<div class="pdf-bg"><object data="${escapeHtml(bg.src)}" type="application/pdf"></object></div>` : ''}
 <div class="field-layer">
-  ${sortedFields.map((f) => fieldHtml(f, args)).join('\n  ')}
+  ${sortedFields.map((f) => fieldHtml(f, args, pageHeightMm)).join('\n  ')}
 </div>
 </body></html>`;
 }

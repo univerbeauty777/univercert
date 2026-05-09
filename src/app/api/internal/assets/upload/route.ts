@@ -9,6 +9,9 @@
 import { uploadAsset, type AssetKind } from '@/lib/r2-assets';
 import { requireRole, RbacError } from '@/lib/rbac';
 import { captureAndRespond } from '@/lib/observability';
+import { getDb } from '@/db/client';
+import { assets } from '@/db/schema';
+import { ID } from '@/lib/ulid';
 
 export const runtime = 'edge';
 
@@ -42,6 +45,26 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return Response.json({ ok: false, error: result.error }, { status: 400 });
     }
+
+    // Registra no DB pra biblioteca
+    try {
+      const db = getDb();
+      await db.insert(assets).values({
+        id: ID.template().replace('tpl_', 'ast_'),
+        workspaceId: sess.workspace.id,
+        r2Key: result.key,
+        kind,
+        contentType: result.contentType,
+        sizeBytes: result.size,
+        originalName: file.name,
+        templateId: templateId ?? null,
+        uploadedBy: sess.user.id,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[assets register] failed:', (e as Error).message);
+    }
+
     return Response.json({
       ok: true,
       key: result.key,

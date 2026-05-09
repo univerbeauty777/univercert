@@ -9,6 +9,51 @@ import { requireRole, RbacError } from '@/lib/rbac';
 import { captureError } from '@/lib/observability';
 import type { LayoutV2 } from '@/lib/layout-v2';
 
+export async function duplicateTemplateAction(templateId: string) {
+  try {
+    const sess = await requireRole('editor');
+    const db = getDb();
+    const [t] = await db
+      .select()
+      .from(templates)
+      .where(and(eq(templates.id, templateId), eq(templates.workspaceId, sess.workspace.id)))
+      .limit(1);
+    if (!t) return { ok: false as const, error: 'template nao encontrado' };
+
+    const newId = ID.template();
+    await db.insert(templates).values({
+      id: newId,
+      workspaceId: sess.workspace.id,
+      name: `${t.name} (cópia)`,
+      vertical: t.vertical,
+      layoutJson: t.layoutJson,
+      thumbnailUrl: t.thumbnailUrl,
+      isPublished: 1,
+      createdBy: sess.user.id,
+    });
+    revalidatePath('/templates');
+    return { ok: true as const, templateId: newId };
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: 'sem permissao (editor+)' };
+    return { ok: false as const, error: (e as Error)?.message ?? 'erro' };
+  }
+}
+
+export async function deleteTemplateAction(templateId: string) {
+  try {
+    const sess = await requireRole('admin');
+    const db = getDb();
+    await db
+      .delete(templates)
+      .where(and(eq(templates.id, templateId), eq(templates.workspaceId, sess.workspace.id)));
+    revalidatePath('/templates');
+    return { ok: true as const };
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: 'sem permissao (admin)' };
+    return { ok: false as const, error: (e as Error)?.message ?? 'erro' };
+  }
+}
+
 export async function saveTemplateV2Action(args: {
   templateId?: string;
   name: string;

@@ -4,7 +4,9 @@
 // Layout limpo, hierarquia clara, preview com skeleton, sem glass blur agressivo.
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { saveBrandKitAction } from './actions';
+import { duplicateTemplateAction, deleteTemplateAction } from './editor/actions';
 
 type Variant = {
   id: string;
@@ -150,34 +152,11 @@ export default function TemplatesGalleryClient({
           <SectionHead
             title="Seus templates customizados"
             count={customTemplates.length}
-            action={<a href="/templates/new" className="btn-secondary btn-sm">+ Novo</a>}
+            action={<a href="/templates/editor" className="btn-secondary btn-sm">+ Novo</a>}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {customTemplates.map((t, i) => (
-              <article
-                key={t.id}
-                className="card-hover relative overflow-hidden p-0 animate-slide-up"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
-                <Badge variant="custom" />
-                <PreviewFrame src={`/api/v1/templates/custom/${t.id}/preview`} title={t.name} />
-                <div className="p-4">
-                  <h3 className="font-semibold text-sm">{t.name}</h3>
-                  <p className="text-[11px] uppercase tracking-wider text-[rgb(var(--fg-subtle))] font-medium mt-0.5">
-                    {t.vertical}
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <a
-                      href={`/api/v1/templates/custom/${t.id}/preview`}
-                      target="_blank"
-                      rel="noopener"
-                      className="btn-secondary btn-sm flex-1 justify-center"
-                    >
-                      Tela cheia
-                    </a>
-                  </div>
-                </div>
-              </article>
+              <CustomTemplateCard key={t.id} t={t} delay={i * 40} />
             ))}
           </div>
         </section>
@@ -259,6 +238,80 @@ export default function TemplatesGalleryClient({
 }
 
 /* ------------------------------------------------------------------------- */
+
+function CustomTemplateCard({ t, delay }: { t: CustomTpl; delay: number }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleDuplicate = async () => {
+    setBusy(true);
+    try {
+      const r = await duplicateTemplateAction(t.id);
+      if (r.ok) {
+        setFeedback(`Duplicado · abrindo editor…`);
+        setTimeout(() => router.push(`/templates/editor?id=${r.templateId}`), 600);
+      } else {
+        setFeedback('Erro: ' + r.error);
+        setBusy(false);
+      }
+    } catch (e) {
+      setFeedback('Erro: ' + (e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Apagar "${t.name}"? Não dá pra desfazer.`)) return;
+    setBusy(true);
+    try {
+      const r = await deleteTemplateAction(t.id);
+      if (r.ok) router.refresh();
+      else { setFeedback('Erro: ' + r.error); setBusy(false); }
+    } catch (e) {
+      setFeedback('Erro: ' + (e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <article
+      className="card-hover relative overflow-hidden p-0 animate-slide-up"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <Badge variant="custom" />
+      <PreviewFrame src={`/api/v1/templates/custom/${t.id}/preview`} title={t.name} />
+      <div className="p-4">
+        <h3 className="font-semibold text-sm">{t.name}</h3>
+        <p className="text-[11px] uppercase tracking-wider text-[rgb(var(--fg-subtle))] font-medium mt-0.5">{t.vertical}</p>
+        {feedback && (
+          <p className="text-xs text-[rgb(var(--fg-muted))] mt-2">{feedback}</p>
+        )}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <a href={`/templates/editor?id=${t.id}`} className="btn-primary btn-sm justify-center">
+            ✎ Editar
+          </a>
+          <button onClick={handleDuplicate} disabled={busy} className="btn-secondary btn-sm justify-center">
+            ⎘ Duplicar
+          </button>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <a
+            href={`/api/v1/templates/custom/${t.id}/preview`}
+            target="_blank"
+            rel="noopener"
+            className="btn-ghost btn-sm justify-center"
+          >
+            Tela cheia
+          </a>
+          <button onClick={handleDelete} disabled={busy} className="btn-ghost btn-sm justify-center text-[rgb(var(--danger))]">
+            Apagar
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function SectionHead({ title, count, action }: { title: string; count?: number; action?: React.ReactNode }) {
   return (

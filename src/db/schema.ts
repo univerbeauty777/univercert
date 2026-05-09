@@ -458,6 +458,27 @@ export const errorEvents = sqliteTable(
   }),
 );
 
+// 22. ASSETS (S22c — biblioteca de uploads R2)
+export const assets = sqliteTable(
+  'assets',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    r2Key: text('r2_key').notNull().unique(),
+    kind: text('kind').notNull(),
+    contentType: text('content_type'),
+    sizeBytes: integer('size_bytes'),
+    originalName: text('original_name'),
+    templateId: text('template_id'),
+    uploadedBy: text('uploaded_by'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_assets_workspace').on(t.workspaceId, t.kind, t.createdAt),
+    keyIdx: index('idx_assets_r2_key').on(t.r2Key),
+  }),
+);
+
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
