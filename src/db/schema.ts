@@ -374,7 +374,7 @@ export const workflows = sqliteTable(
     workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     channel: text('channel', { enum: ['email', 'whatsapp'] }).notNull(),
-    triggerEvent: text('trigger_event', { enum: ['credential.issued', 'credential.revoked', 'request.created', 'nps.d7'] }).notNull(),
+    triggerEvent: text('trigger_event').notNull(),       // 'credential.issued' | 'credential.revoked' | 'request.created' | 'request.submitted' | 'request.needs_revision' | 'nps.d7'
     subject: text('subject'),
     bodyTemplate: text('body_template').notNull(),
     isActive: integer('is_active').notNull().default(1),

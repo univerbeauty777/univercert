@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { workspaces, courses } from '@/db/schema';
 import RequestFormClient from './RequestFormClient';
+import { getRequestByToken } from './actions';
 import type { RequirementsSchema } from '@/lib/course-requirements';
 
 export const runtime = 'edge';
@@ -11,10 +12,14 @@ export const dynamic = 'force-dynamic';
 
 export default async function SolicitarPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ws: string; courseSlug: string }>;
+  searchParams: Promise<{ revise?: string }>;
 }) {
   const { ws: wsSlug, courseSlug } = await params;
+  const sp = await searchParams;
+  const reviseToken = sp.revise;
   const db = getDb();
 
   const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, wsSlug)).limit(1);
@@ -37,6 +42,20 @@ export default async function SolicitarPage({
     try { schema = JSON.parse(course.requirementsJson); } catch {}
   }
 
+  // Modo revisão: pré-popula com dados da solicitação anterior
+  let reviseInitial: { name: string; email: string; extras: Record<string, any>; reason: string | null } | null = null;
+  if (reviseToken) {
+    const req = await getRequestByToken(reviseToken);
+    if (req) {
+      reviseInitial = {
+        name: req.submitterName ?? '',
+        email: req.submitterEmail ?? '',
+        extras: req.extras ?? {},
+        reason: req.rejectionReason,
+      };
+    }
+  }
+
   return (
     <main style={{ background: '#f9fafb', minHeight: '100vh', padding: '40px 16px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -56,12 +75,25 @@ export default async function SolicitarPage({
           )}
         </header>
 
+        {reviseInitial && (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderLeft: '4px solid #ea580c', borderRadius: 8, padding: 16, marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: '#9a3412' }}>↺ Pedido de revisão</h2>
+            <p style={{ margin: 0, fontSize: 13, color: '#7c2d12', lineHeight: 1.5 }}>
+              {reviseInitial.reason ?? 'A escola pediu correções na sua solicitação. Ajuste os campos abaixo e reenvie.'}
+            </p>
+          </div>
+        )}
+
         <RequestFormClient
           workspaceSlug={ws.slug}
           workspaceName={ws.name}
           courseSlug={course.slug}
           courseName={course.name}
           schema={schema}
+          reviseToken={reviseInitial ? reviseToken : undefined}
+          initialName={reviseInitial?.name ?? ''}
+          initialEmail={reviseInitial?.email ?? ''}
+          initialExtras={reviseInitial?.extras ?? {}}
         />
 
         <footer style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: '#9ca3af' }}>

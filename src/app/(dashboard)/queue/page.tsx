@@ -68,9 +68,12 @@ export default async function QueuePage({ searchParams }: Params) {
         status: request.status,
         rejectionReason: request.rejectionReason,
         createdAt: request.createdAt,
-        recipientName: recipient?.name ?? null,
-        recipientEmail: recipient?.email ?? null,
+        recipientName: recipient?.name ?? request.submitterName ?? null,
+        recipientEmail: recipient?.email ?? request.submitterEmail ?? null,
         recipientCpf: recipient?.cpf ?? null,
+        extrasJson: request.extrasJson,
+        revisionsJson: request.revisionsJson,
+        courseId: request.courseId,
       }))}
       currentStatus={status}
       currentSource={sourceFilter}

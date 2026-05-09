@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { approveRequestAction, rejectRequestAction, bulkApproveAction } from './actions';
+import { approveRequestAction, rejectRequestAction, bulkApproveAction, requestRevisionAction } from './actions';
 import PageHeader from '@/components/PageHeader';
 import StatsBar from '@/components/StatsBar';
 import EmptyState from '@/components/EmptyState';
@@ -18,10 +18,14 @@ type RequestRow = {
   recipientName: string | null;
   recipientEmail: string | null;
   recipientCpf: string | null;
+  extrasJson?: string | null;
+  revisionsJson?: string | null;
+  courseId?: string | null;
 };
 
 const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
   pending: { label: 'Pendente', cls: 'badge-warning' },
+  needs_revision: { label: 'Revisão', cls: 'badge-warning' },
   approved: { label: 'Aprovado', cls: 'badge-success' },
   rejected: { label: 'Rejeitado', cls: 'badge-danger' },
   emitted: { label: 'Emitido', cls: 'badge-primary' },
@@ -42,6 +46,7 @@ export default function QueueClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [searchInput, setSearchInput] = useState(currentSearch);
@@ -75,6 +80,15 @@ export default function QueueClient({
       const result = await rejectRequestAction(id, fd);
       setFeedback({ ok: result.ok, msg: result.ok ? 'Rejeitado' : result.error });
       if (result.ok) router.refresh();
+    });
+  };
+  const handleRevise = (id: string) => {
+    const comment = prompt('O que precisa ser corrigido? (Esse texto vai pro email do aluno)');
+    if (!comment || !comment.trim()) return;
+    startTransition(async () => {
+      const r = await requestRevisionAction(id, comment);
+      setFeedback({ ok: r.ok, msg: r.ok ? 'Revisão pedida · email enviado' : r.error });
+      if (r.ok) router.refresh();
     });
   };
   const handleBulkApprove = () => {
@@ -182,13 +196,32 @@ export default function QueueClient({
                 <tbody>
                   {requests.map((r) => {
                     const badge = STATUS_BADGES[r.status] ?? STATUS_BADGES.pending;
+                    const extras = parseJSON(r.extrasJson);
+                    const revisions = parseJSON(r.revisionsJson) ?? [];
+                    const hasExtras = extras && Object.keys(extras).length > 0;
+                    const isExpanded = expandedId === r.id;
                     return (
+                      <>
                       <tr key={r.id} className={`border-t border-gray-100 hover:bg-primary-soft/40 transition ${selected.has(r.id) ? 'bg-primary-soft/60' : ''}`}>
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} disabled={r.status !== 'pending'} className="accent-primary disabled:opacity-30" />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-bold text-ink-900">{r.recipientName ?? '(sem nome)'}</div>
+                          <div className="font-bold text-ink-900 flex items-center gap-2 flex-wrap">
+                            {r.recipientName ?? '(sem nome)'}
+                            {hasExtras && (
+                              <button
+                                onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                                className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 hover:bg-amber-200 transition"
+                                title="Ver fotos/vídeos enviados"
+                              >
+                                {isExpanded ? '▾' : '▸'} {Object.keys(extras).length} extra{Object.keys(extras).length > 1 ? 's' : ''}
+                              </button>
+                            )}
+                            {revisions.length > 0 && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700" title={`${revisions.length} revisão(ões)`}>↺ {revisions.length}</span>
+                            )}
+                          </div>
                           <div className="text-xs text-ink-500">{r.recipientEmail ?? '—'}</div>
                         </td>
                         <td className="px-4 py-3">
@@ -203,8 +236,13 @@ export default function QueueClient({
                         <td className="px-4 py-3 text-center"><span className={badge.cls}>{badge.label}</span></td>
                         <td className="px-4 py-3 text-xs text-ink-500">{new Date(r.createdAt * 1000).toLocaleString('pt-BR')}</td>
                         <td className="px-4 py-3 text-right">
-                          {r.status === 'pending' ? (
+                          {(r.status === 'pending' || r.status === 'needs_revision') ? (
                             <div className="flex gap-1.5 justify-end">
+                              {hasExtras && (
+                                <button onClick={() => handleRevise(r.id)} disabled={isPending} className="text-xs text-orange-700 hover:text-white hover:bg-orange-600 px-3 py-1.5 rounded-lg border border-orange-300 transition font-medium" title="Pedir correção e enviar email pro aluno">
+                                  ↺ Revisar
+                                </button>
+                              )}
                               <button onClick={() => handleReject(r.id)} disabled={isPending} className="text-xs text-ink-500 hover:text-danger px-3 py-1.5 rounded-lg hover:bg-danger-soft transition font-medium">Rejeitar</button>
                               <button onClick={() => handleApprove(r.id)} disabled={isPending} className="btn-primary text-xs px-3 py-1.5">Aprovar</button>
                             </div>
@@ -216,6 +254,30 @@ export default function QueueClient({
                           )}
                         </td>
                       </tr>
+
+                      {isExpanded && hasExtras && (
+                        <tr key={r.id + '-expanded'} className="border-t border-gray-100 bg-gray-50">
+                          <td colSpan={7} className="px-4 py-4">
+                            <ExtrasView extras={extras} />
+                            {revisions.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <h4 className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 mb-2">Histórico de revisões ({revisions.length})</h4>
+                                <ul className="space-y-1.5">
+                                  {revisions.map((rev: any, i: number) => (
+                                    <li key={i} className="text-xs text-ink-700">
+                                      <span className="text-orange-600 font-medium">↺ {rev.action}</span>
+                                      {' · '}
+                                      <span className="text-ink-500">{new Date(rev.at * 1000).toLocaleString('pt-BR')}</span>
+                                      {rev.comment && <div className="ml-5 mt-0.5 italic">"{rev.comment}"</div>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
                 </tbody>
@@ -226,4 +288,65 @@ export default function QueueClient({
       </div>
     </main>
   );
+}
+
+/* ---- helpers/components ---- */
+
+function parseJSON(s: string | null | undefined): any {
+  if (!s) return null;
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function ExtrasView({ extras }: { extras: Record<string, any> }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {Object.entries(extras).map(([key, value]) => (
+        <div key={key} className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 mb-2">{key}</div>
+          <ExtraValue value={value} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ExtraValue({ value }: { value: any }) {
+  if (value == null) return <span className="text-xs text-ink-500">—</span>;
+  // image_pair { before, after }
+  if (typeof value === 'object' && (value.before || value.after)) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {(['before', 'after'] as const).map((k) => (
+          <div key={k}>
+            <div className="text-[10px] uppercase text-ink-500 mb-1">{k === 'before' ? 'Antes' : 'Depois'}</div>
+            {value[k] ? (
+              <a href={`/api/v1/assets/${encodeURIComponent(value[k])}`} target="_blank" rel="noopener">
+                <img src={`/api/v1/assets/${encodeURIComponent(value[k])}`} alt={k} className="w-full h-32 object-cover rounded border border-gray-200 hover:opacity-90" />
+              </a>
+            ) : <div className="h-32 bg-gray-100 rounded grid place-items-center text-xs text-ink-500">—</div>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (typeof value === 'string' && value.startsWith('workspaces/')) {
+    return (
+      <a href={`/api/v1/assets/${encodeURIComponent(value)}`} target="_blank" rel="noopener">
+        <img src={`/api/v1/assets/${encodeURIComponent(value)}`} alt="" className="w-full max-h-48 object-cover rounded border border-gray-200 hover:opacity-90" />
+      </a>
+    );
+  }
+  if (typeof value === 'string' && /^(https?:\/\/)?(www\.)?(youtube|youtu|vimeo|loom|tiktok|instagram)/.test(value)) {
+    return <a href={value} target="_blank" rel="noopener" className="text-primary text-sm underline break-all">▶ {value}</a>;
+  }
+  if (typeof value === 'string' && /^https?:\/\//.test(value)) {
+    return <a href={value} target="_blank" rel="noopener" className="text-primary text-sm underline break-all">{value}</a>;
+  }
+  if (typeof value === 'string') {
+    return <p className="text-sm text-ink-700 whitespace-pre-wrap break-words">{value}</p>;
+  }
+  if (typeof value === 'boolean') {
+    return <span className={`badge ${value ? 'badge-success' : 'badge-neutral'}`}>{value ? 'Sim' : 'Não'}</span>;
+  }
+  return <code className="text-xs">{JSON.stringify(value)}</code>;
 }

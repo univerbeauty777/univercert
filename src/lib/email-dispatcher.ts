@@ -8,7 +8,7 @@ import { interpolate, type WorkflowVars } from '@/lib/workflow-template';
 import { sendEmail } from '@/lib/resend';
 import { ID } from '@/lib/ulid';
 
-type TriggerEvent = 'credential.issued' | 'credential.revoked' | 'request.created' | 'nps.d7';
+type TriggerEvent = 'credential.issued' | 'credential.revoked' | 'request.created' | 'request.submitted' | 'request.needs_revision' | 'nps.d7';
 
 const APP_BASE = 'https://univercert.com.br';
 

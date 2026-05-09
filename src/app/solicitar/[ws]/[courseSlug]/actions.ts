@@ -8,6 +8,89 @@ import { validateExtras, type RequirementsSchema, type ExtrasResponse } from '@/
 import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
 import { computeCertHash } from '@/lib/credentials';
 
+export async function getRequestByToken(token: string) {
+  const db = getDb();
+  const [r] = await db
+    .select()
+    .from(certificateRequests)
+    .where(eq(certificateRequests.requestToken, token))
+    .limit(1);
+  if (!r) return null;
+  return {
+    id: r.id,
+    status: r.status,
+    submitterName: r.submitterName,
+    submitterEmail: r.submitterEmail,
+    courseName: r.courseName,
+    extras: r.extrasJson ? safeJson(r.extrasJson) : {},
+    rejectionReason: r.rejectionReason,
+  };
+}
+
+function safeJson(s: string) { try { return JSON.parse(s); } catch { return {}; } }
+
+export async function submitRevisionAction(args: {
+  token: string;
+  extras: ExtrasResponse;
+}) {
+  const db = getDb();
+  const [r] = await db
+    .select()
+    .from(certificateRequests)
+    .where(eq(certificateRequests.requestToken, args.token))
+    .limit(1);
+  if (!r) return { ok: false as const, error: 'token invalido' };
+  if (r.status !== 'needs_revision' && r.status !== 'rejected') {
+    return { ok: false as const, error: 'request nao está aguardando revisão' };
+  }
+
+  // Valida extras vs course schema
+  if (r.courseId) {
+    const [course] = await db.select().from(courses).where(eq(courses.id, r.courseId)).limit(1);
+    if (course?.requirementsJson) {
+      try {
+        const schema = JSON.parse(course.requirementsJson) as RequirementsSchema;
+        const errs = validateExtras(schema, args.extras);
+        if (errs.length > 0) return { ok: false as const, error: errs.map((e) => e.message).join(' · ') };
+      } catch {}
+    }
+  }
+
+  // Anota revisão no historico
+  let history: any[] = [];
+  if (r.revisionsJson) {
+    try { history = JSON.parse(r.revisionsJson); } catch {}
+  }
+  history.push({
+    at: Math.floor(Date.now() / 1000),
+    action: 'revision_submitted',
+    previousExtras: r.extrasJson ? JSON.parse(r.extrasJson) : null,
+  });
+
+  await db
+    .update(certificateRequests)
+    .set({
+      status: 'pending',                                  // volta pra fila
+      extrasJson: JSON.stringify(args.extras),
+      revisionsJson: JSON.stringify(history.slice(-10)),
+      rejectionReason: null,
+      reviewerId: null,
+      reviewedAt: null,
+    })
+    .where(eq(certificateRequests.id, r.id));
+
+  // Notifica time da escola que revisão chegou
+  try {
+    await dispatchWorkflowsFor({
+      workspaceId: r.workspaceId,
+      triggerEvent: 'request.submitted',
+      channel: 'email',
+    });
+  } catch {}
+
+  return { ok: true as const };
+}
+
 type SubmitInput = {
   workspaceSlug: string;
   courseSlug: string;

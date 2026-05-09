@@ -3,7 +3,7 @@
 // UniverCert · Public request form (S22)
 
 import { useState, useRef, useTransition } from 'react';
-import { submitRequestAction } from './actions';
+import { submitRequestAction, submitRevisionAction } from './actions';
 import type { RequirementsSchema, RequirementField, ExtrasResponse } from '@/lib/course-requirements';
 
 const FORM_STYLE: React.CSSProperties = {
@@ -15,18 +15,23 @@ const FORM_STYLE: React.CSSProperties = {
 
 export default function RequestFormClient({
   workspaceSlug, workspaceName, courseSlug, courseName, schema,
+  reviseToken, initialName = '', initialEmail = '', initialExtras = {},
 }: {
   workspaceSlug: string;
   workspaceName: string;
   courseSlug: string;
   courseName: string;
   schema: RequirementsSchema;
+  reviseToken?: string;
+  initialName?: string;
+  initialEmail?: string;
+  initialExtras?: ExtrasResponse;
 }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
-  const [extras, setExtras] = useState<ExtrasResponse>({});
+  const [extras, setExtras] = useState<ExtrasResponse>(initialExtras);
   const [submitted, setSubmitted] = useState<{ requestId: string; autoIssued: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -34,9 +39,20 @@ export default function RequestFormClient({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!name.trim()) { setError('Nome é obrigatório'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email inválido'); return; }
+    if (!reviseToken) {
+      if (!name.trim()) { setError('Nome é obrigatório'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email inválido'); return; }
+    }
     startTransition(async () => {
+      if (reviseToken) {
+        const r = await submitRevisionAction({ token: reviseToken, extras });
+        if (r.ok) {
+          setSubmitted({ requestId: 'revisão', autoIssued: false });
+        } else {
+          setError(r.error);
+        }
+        return;
+      }
       const r = await submitRequestAction({
         workspaceSlug, courseSlug,
         submitterName: name, submitterEmail: email,
