@@ -4,6 +4,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation } from '@/lib/layout-v2';
+import { pdfFileToPngBlob, detectOrientation } from '@/lib/pdf-to-png';
 
 const SAMPLE = {
   recipientName: 'Maria Aparecida da Silva',
@@ -49,6 +50,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   const [name, setName] = useState(templateName ?? 'Meu template');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bgUploading, setBgUploading] = useState(false);
+  const [bgStage, setBgStage] = useState<string>('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(0.5);
@@ -59,29 +61,49 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   /* ---- Background upload ---- */
   const handleBackgroundUpload = async (file: File) => {
     setBgUploading(true);
+    setErrorMsg(null);
     try {
+      let uploadFile: File | Blob = file;
+      let detectedOrientation: Orientation | null = null;
+      let importedFromLabel = file.name.toLowerCase().split('.').pop() ?? 'file';
+
+      // Sprint 21b: PDF -> PNG client-side via pdf.js
+      if (file.type === 'application/pdf') {
+        setBgStage('Carregando pdf.js…');
+        const conv = await pdfFileToPngBlob(file, 2.5);
+        setBgStage('Convertendo página 1…');
+        uploadFile = new File([conv.blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' });
+        detectedOrientation = detectOrientation(conv.width, conv.height);
+        importedFromLabel = `pdf-pg1-of-${conv.pageCount}`;
+      }
+      setBgStage('Subindo pra R2…');
+
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('file', uploadFile, (uploadFile as File).name ?? 'background.png');
       fd.append('kind', 'background');
       if (templateId) fd.append('templateId', templateId);
       const r = await fetch('/api/internal/assets/upload', { method: 'POST', body: fd });
       const data = await r.json();
       if (!data.ok) throw new Error(data.error);
-      const isPdf = file.type === 'application/pdf';
+
       const isSvg = file.type === 'image/svg+xml';
+
       setLayout((l) => ({
         ...l,
+        // Auto-detecta orientation do PDF (caso seja portrait, vira layout portrait)
+        orientation: detectedOrientation ?? l.orientation,
         background: {
-          type: isPdf ? 'pdf' : isSvg ? 'svg' : 'image',
+          type: isSvg ? 'svg' : 'image',     // PDF agora vira image apos conversao
           src: data.url,
           cover: false,
         },
-        meta: { ...l.meta, importedFrom: file.name.toLowerCase().split('.').pop() },
+        meta: { ...l.meta, importedFrom: importedFromLabel },
       }));
     } catch (e) {
       setErrorMsg('Falha no upload: ' + (e as Error).message);
     } finally {
       setBgUploading(false);
+      setBgStage('');
     }
   };
 
@@ -188,7 +210,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
         <div className="mt-5 pt-4 border-t border-[rgb(var(--border))]">
           <h3 className="text-sm font-semibold mb-2">Background</h3>
           <FileDropZone
-            label={bgUploading ? 'Enviando…' : layout.background?.type === 'image' || layout.background?.type === 'svg' || layout.background?.type === 'pdf' ? 'Trocar imagem/PDF' : 'Subir PNG/JPG/PDF/SVG'}
+            label={bgUploading ? (bgStage || 'Enviando…') : layout.background?.type === 'image' || layout.background?.type === 'svg' ? 'Trocar imagem/PDF' : 'Subir PNG/JPG/PDF/SVG'}
             accept="image/png,image/jpeg,image/svg+xml,image/webp,application/pdf"
             disabled={bgUploading}
             onFile={handleBackgroundUpload}
