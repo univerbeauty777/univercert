@@ -35,11 +35,14 @@ export function getAuth() {
       },
     }),
     user: {
-      // Garante mapping correto entre nomes Better Auth e colunas D1
       modelName: 'users',
-      fields: {
-        // Campos opcionais — `image` agora existe na tabela users (migration 0005)
-      },
+      fields: {},
+    },
+    account: {
+      modelName: 'accounts',
+    },
+    verification: {
+      modelName: 'verifications',
     },
     advanced: {
       cookiePrefix: 'uc',
