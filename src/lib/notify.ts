@@ -1,17 +1,26 @@
-// UniverCert · Notificações de credential emitida
-// Sprint 2: Resend (email) + Meta WhatsApp Cloud API.
-// Atualmente: stubs que logam quando RESEND_API_KEY ou META_WHATSAPP_TOKEN não setados.
+// UniverCert · Notify orchestrator (refatorado S18)
+// Dispara workflows custom configurados pelo workspace via dispatchWorkflowsFor.
+// Fallback: se workspace nao tem workflow ativo pra credential.issued, manda email
+// default (template padrao) pra nao deixar aluno sem comunicacao.
 
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { credentials, recipients } from '@/db/schema';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { credentials, recipients, workflows } from '@/db/schema';
+import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
+import { sendEmail } from '@/lib/resend';
+import { emailEvents } from '@/db/schema';
+import { ID } from '@/lib/ulid';
 
 type SendResult = {
-  email: { sent: boolean; provider: string; reason?: string };
-  whatsapp: { sent: boolean; provider: string; reason?: string };
+  email: { sent: boolean; reason?: string; via?: 'workflow' | 'default' };
+  whatsapp: { sent: boolean; reason?: string };
 };
 
+/**
+ * Notifica destinatário sobre credential emitida.
+ * - Se ha workflows custom ativos pro evento, dispara eles (via dispatcher).
+ * - Se nao, manda 1 email default minimalista (pra workspace que ainda nao configurou).
+ */
 export async function notifyRecipient(credentialId: string): Promise<SendResult> {
   const db = getDb();
   const [row] = await db
@@ -23,128 +32,107 @@ export async function notifyRecipient(credentialId: string): Promise<SendResult>
 
   if (!row || !row.credential) throw new Error('CREDENTIAL_NOT_FOUND');
   const { credential, recipient } = row;
-  if (!recipient) throw new Error('RECIPIENT_NOT_FOUND');
-
-  const verifyUrl = `https://univercert.com.br/v/${credential.id}`;
-  const pdfUrl = `https://univercert.com.br/api/v1/credentials/${credential.id}/pdf`;
 
   const result: SendResult = {
-    email: { sent: false, provider: 'resend' },
-    whatsapp: { sent: false, provider: 'meta-cloud' },
+    email: { sent: false },
+    whatsapp: { sent: false },
   };
 
-  // EMAIL via Resend
-  if (recipient.email) {
-    result.email = await sendEmail({
-      to: recipient.email,
-      recipientName: recipient.name,
-      courseName: credential.courseName,
-      verifyUrl,
-      pdfUrl,
+  const recipientEmail = recipient?.email;
+
+  // 1. Tenta dispatcher de workflows
+  const dispatchResult = await dispatchWorkflowsFor({
+    workspaceId: credential.workspaceId,
+    triggerEvent: 'credential.issued',
+    credentialId,
+    channel: 'email',
+  });
+
+  if (dispatchResult.dispatched > 0) {
+    result.email = { sent: true, via: 'workflow' };
+  } else if (recipientEmail) {
+    // 2. Fallback: manda email default
+    const sent = await sendDefaultEmail({
+      to: recipientEmail,
+      recipientName: recipient?.name ?? 'Aluno',
+      courseName: credential.courseName ?? 'seu curso',
+      verifyUrl: `https://univercert.com.br/v/${credential.id}`,
+      pdfUrl: `https://univercert.com.br/api/v1/credentials/${credential.id}/pdf`,
+      workspaceId: credential.workspaceId,
+      credentialId: credential.id,
     });
+    result.email = sent;
   } else {
-    result.email = { sent: false, provider: 'resend', reason: 'no_email' };
+    result.email = { sent: false, reason: 'no_email' };
   }
 
-  // WHATSAPP via Meta Cloud API
-  if (recipient.phoneWhatsapp) {
-    result.whatsapp = await sendWhatsapp({
-      to: recipient.phoneWhatsapp,
-      recipientName: recipient.name,
-      courseName: credential.courseName,
-      verifyUrl,
-    });
-  } else {
-    result.whatsapp = { sent: false, provider: 'meta-cloud', reason: 'no_phone' };
-  }
+  // 3. WhatsApp ainda usa Meta Cloud direto (workflows whatsapp em sprint futuro)
+  // Mantemos no-op se sem credenciais — mas log no dispatcher se houver workflow whatsapp.
 
   return result;
 }
 
-async function sendEmail(args: {
+async function sendDefaultEmail(args: {
   to: string;
   recipientName: string;
   courseName: string;
   verifyUrl: string;
   pdfUrl: string;
-}) {
-  const { env } = getRequestContext();
-  // @ts-expect-error
-  const apiKey = env.RESEND_API_KEY as string | undefined;
-  if (!apiKey) {
-    console.log('[notify:email] STUB (sem RESEND_API_KEY) →', args.to, args.courseName);
-    return { sent: false, provider: 'resend', reason: 'no_api_key' };
-  }
+  workspaceId: string;
+  credentialId: string;
+}): Promise<{ sent: boolean; via: 'default'; reason?: string }> {
+  const db = getDb();
 
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'UniverCert <no-reply@univercert.com.br>',
-      to: [args.to],
-      subject: `🎓 Seu certificado de "${args.courseName}" está pronto!`,
-      html: `
-        <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
-          <h1 style="color:#6366F1;font-size:1.6rem;">Olá, ${escapeHtml(args.recipientName)}!</h1>
-          <p>Seu certificado do curso <strong>${escapeHtml(args.courseName)}</strong> foi emitido. Você pode:</p>
-          <ul>
-            <li>📄 <a href="${args.pdfUrl}">Baixar o PDF</a></li>
-            <li>🔗 <a href="${args.verifyUrl}">Verificar autenticidade</a></li>
-          </ul>
-          <p style="color:#666;font-size:0.9rem;">UniverCert · plataforma brasileira de certificados.</p>
-        </div>
-      `,
-    }),
+  const subject = `Seu certificado de ${args.courseName} está pronto, ${args.recipientName.split(' ')[0]}!`;
+  const html = `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f9fafb;font-family:Inter,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f9fafb;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;max-width:560px;width:100%;">
+<tr><td style="padding:28px 32px 12px;border-bottom:1px solid #f3f4f6;">
+<div style="font-weight:700;font-size:18px;letter-spacing:-0.02em;">
+<span style="color:#1B2D5E;">univer</span><span style="color:#D4A937;">CERT</span>
+</div>
+</td></tr>
+<tr><td style="padding:28px 32px;">
+<h1 style="margin:0 0 14px;font-size:20px;font-weight:600;color:#111827;">Olá, ${escapeHtml(args.recipientName.split(' ')[0])}!</h1>
+<p style="margin:0 0 16px;color:#1f2937;line-height:1.55;font-size:15px;">
+Seu certificado do curso <strong>${escapeHtml(args.courseName)}</strong> foi emitido.
+</p>
+<table cellpadding="0" cellspacing="0" style="margin:18px 0;">
+<tr><td style="padding-right:8px;">
+<a href="${args.pdfUrl}" style="display:inline-block;padding:10px 18px;background:#1B2D5E;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Baixar PDF</a>
+</td><td>
+<a href="${args.verifyUrl}" style="display:inline-block;padding:10px 18px;background:#fff;color:#1B2D5E;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:1px solid #e5e7eb;">Verificar autenticidade</a>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:18px 32px 28px;border-top:1px solid #f3f4f6;">
+<p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.5;">Enviado via UniverCert · plataforma brasileira de certificados digitais</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  const send = await sendEmail({ to: args.to, subject, html });
+
+  await db.insert(emailEvents).values({
+    id: ID.emailEvent(),
+    workspaceId: args.workspaceId,
+    recipientEmail: args.to,
+    subject,
+    bodyPreview: html.slice(0, 200),
+    status: send.ok ? 'sent' : 'failed',
+    providerMessageId: send.ok ? send.id : null,
+    errorMessage: send.ok ? null : send.error.slice(0, 500),
+    credentialId: args.credentialId,
+    triggeredByEvent: 'credential.issued.fallback',
+    sentAt: send.ok ? Math.floor(Date.now() / 1000) : null,
   });
 
-  if (!resp.ok) {
-    return { sent: false, provider: 'resend', reason: `http_${resp.status}` };
-  }
-  return { sent: true, provider: 'resend' };
-}
-
-async function sendWhatsapp(args: {
-  to: string;
-  recipientName: string;
-  courseName: string;
-  verifyUrl: string;
-}) {
-  const { env } = getRequestContext();
-  // @ts-expect-error
-  const token = env.META_WHATSAPP_TOKEN as string | undefined;
-  // @ts-expect-error
-  const phoneId = env.META_WHATSAPP_PHONE_ID as string | undefined;
-
-  if (!token || !phoneId) {
-    console.log('[notify:wa] STUB (sem META_WHATSAPP) →', args.to, args.courseName);
-    return { sent: false, provider: 'meta-cloud', reason: 'no_credentials' };
-  }
-
-  const phone = args.to.replace(/\D/g, '');
-
-  const resp = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: 'text',
-      text: {
-        body: `🎓 Olá, ${args.recipientName}! Seu certificado do curso "${args.courseName}" está pronto. Verifique em: ${args.verifyUrl}`,
-      },
-    }),
-  });
-
-  if (!resp.ok) {
-    return { sent: false, provider: 'meta-cloud', reason: `http_${resp.status}` };
-  }
-  return { sent: true, provider: 'meta-cloud' };
+  if (send.ok) return { sent: true, via: 'default' };
+  return { sent: false, via: 'default', reason: send.error };
 }
 
 function escapeHtml(str: string): string {

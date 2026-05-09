@@ -25,4 +25,8 @@ export const ID = {
   webhookOut: () => id('who'),
   auditLog: () => id('aud'),
   session: () => id('sess'),
+  workflow: () => id('wf'),
+  invite: () => id('inv'),
+  emailEvent: () => id('em'),
+  errorEvent: () => id('err'),
 };

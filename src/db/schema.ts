@@ -373,8 +373,61 @@ export const verifications = sqliteTable(
   }),
 );
 
+// 19. EMAIL_EVENTS (S18 — log de envios via Resend)
+export const emailEvents = sqliteTable(
+  'email_events',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    recipientEmail: text('recipient_email').notNull(),
+    subject: text('subject'),
+    bodyPreview: text('body_preview'),
+    status: text('status', { enum: ['queued', 'sent', 'failed', 'bounced', 'opened', 'clicked'] }).notNull(),
+    provider: text('provider').default('resend'),
+    providerMessageId: text('provider_message_id'),
+    errorMessage: text('error_message'),
+    workflowId: text('workflow_id').references(() => workflows.id, { onDelete: 'set null' }),
+    credentialId: text('credential_id').references(() => credentials.id, { onDelete: 'set null' }),
+    triggeredByEvent: text('triggered_by_event'),
+    sentAt: integer('sent_at'),
+    openedAt: integer('opened_at'),
+    clickedAt: integer('clicked_at'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    workspaceIdx: index('idx_email_events_workspace').on(t.workspaceId, t.createdAt),
+    statusIdx: index('idx_email_events_status').on(t.status),
+    providerMsgIdx: index('idx_email_events_provider_msg').on(t.providerMessageId),
+  }),
+);
+
+// 20. ERROR_EVENTS (S18 — captureError())
+export const errorEvents = sqliteTable(
+  'error_events',
+  {
+    id: text('id').primaryKey(),
+    path: text('path').notNull(),
+    method: text('method'),
+    statusCode: integer('status_code'),
+    errorMessage: text('error_message'),
+    errorStack: text('error_stack'),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
+    userId: text('user_id'),
+    workspaceId: text('workspace_id'),
+    metadataJson: text('metadata_json'),
+    occurredAt: integer('occurred_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    recentIdx: index('idx_error_events_recent').on(t.occurredAt),
+    pathIdx: index('idx_error_events_path').on(t.path),
+  }),
+);
+
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
+export type EmailEvent = typeof emailEvents.$inferSelect;
+export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type Template = typeof templates.$inferSelect;

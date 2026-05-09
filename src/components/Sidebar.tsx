@@ -138,6 +138,7 @@ const SECTIONS: NavSection[] = [
       { href: '/billing', label: 'Billing', icon: Icon.card },
       { href: '/reseller', label: 'Reseller', icon: Icon.store },
       { href: '/audit', label: 'Audit log', icon: Icon.log },
+      { href: '/admin/health', label: 'Saúde · admin', icon: Icon.zap },
     ],
   },
 ];
