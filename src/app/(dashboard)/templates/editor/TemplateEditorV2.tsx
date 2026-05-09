@@ -9,6 +9,7 @@ import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation, PageSiz
 import { getPageDimensions } from '@/lib/layout-v2';
 import { pdfFileToPngBlob, detectOrientation } from '@/lib/pdf-to-png';
 import { useLayoutHistory } from '@/lib/editor-history';
+import AssetLibraryModal from '@/components/AssetLibraryModal';
 
 const SAMPLE = {
   recipientName: 'Maria Aparecida da Silva',
@@ -59,7 +60,8 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   const commit = history.commit;
 
   const [name, setName] = useState(templateName ?? 'Meu template');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bgUploading, setBgUploading] = useState(false);
   const [bgStage, setBgStage] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -67,9 +69,30 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   const [zoom, setZoom] = useState<number>(0.5);
   const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }>({});
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState<null | { kind: 'background' | 'logo'; onPick: (key: string, url: string) => void }>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const selected = layout.fields.find((f) => f.id === selectedId) ?? null;
+  const selected = primaryId ? layout.fields.find((f) => f.id === primaryId) ?? null : null;
+  const setSelectedId = (id: string | null) => {
+    setPrimaryId(id);
+    setSelectedIds(new Set(id ? [id] : []));
+  };
+  const handleFieldClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      setPrimaryId(id);
+    } else {
+      setSelectedId(id);
+    }
+  };
+  const allSelectedIds = (): string[] => Array.from(selectedIds);
 
   /* -------------------- INJECT CUSTOM FONTS -------------------- */
   useEffect(() => {
@@ -190,6 +213,64 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     commit();
   }, [setLayout, commit]);
 
+  /* -------------------- ALIGN / DISTRIBUTE (multi-select) -------------------- */
+  type AlignDir = 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom' | 'distH' | 'distV';
+  const alignFields = useCallback((dir: AlignDir) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length < 2) return;
+    setLayout((l) => {
+      const targets = l.fields.filter((f) => ids.includes(f.id) && !f.locked);
+      if (targets.length < 2) return l;
+      let xs = targets.map((f) => f.x);
+      let ys = targets.map((f) => f.y);
+      let xMaxs = targets.map((f) => f.x + f.w);
+      let yMaxs = targets.map((f) => f.y + f.h);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xMaxs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...yMaxs);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+
+      let updated = l.fields;
+      if (dir === 'distH' || dir === 'distV') {
+        // Distribui igualmente entre min e max
+        const sorted = [...targets].sort((a, b) => (dir === 'distH' ? a.x - b.x : a.y - b.y));
+        const totalSize = dir === 'distH'
+          ? sorted.reduce((s, f) => s + f.w, 0)
+          : sorted.reduce((s, f) => s + f.h, 0);
+        const span = dir === 'distH' ? maxX - minX : maxY - minY;
+        const gap = (span - totalSize) / Math.max(1, sorted.length - 1);
+        let cursor = dir === 'distH' ? minX : minY;
+        const updates = new Map<string, { x?: number; y?: number }>();
+        sorted.forEach((f, i) => {
+          if (i === 0) {
+            cursor += dir === 'distH' ? f.w : f.h;
+            return;
+          }
+          if (i === sorted.length - 1) return;
+          cursor += gap;
+          updates.set(f.id, dir === 'distH' ? { x: cursor } : { y: cursor });
+          cursor += dir === 'distH' ? f.w : f.h;
+        });
+        updated = l.fields.map((f) => updates.has(f.id) ? { ...f, ...updates.get(f.id)! } : f);
+      } else {
+        updated = l.fields.map((f) => {
+          if (!ids.includes(f.id) || f.locked) return f;
+          if (dir === 'left') return { ...f, x: minX };
+          if (dir === 'right') return { ...f, x: maxX - f.w };
+          if (dir === 'centerH') return { ...f, x: cx - f.w / 2 };
+          if (dir === 'top') return { ...f, y: minY };
+          if (dir === 'bottom') return { ...f, y: maxY - f.h };
+          if (dir === 'centerV') return { ...f, y: cy - f.h / 2 };
+          return f;
+        });
+      }
+      return { ...l, fields: updated };
+    });
+    commit();
+  }, [selectedIds, setLayout, commit]);
+
   const moveZ = useCallback((id: string, delta: 'forward' | 'backward' | 'front' | 'back') => {
     setLayout((l) => {
       const max = Math.max(...l.fields.map((f) => f.z ?? 1));
@@ -245,20 +326,41 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     const field = layout.fields.find((f) => f.id === id);
     if (!field || field.locked) return;
 
+    // Multi-drag: se id está em selectedIds e há mais de 1 selecionado, move todos
+    const isMulti = selectedIds.has(id) && selectedIds.size > 1;
+    const movingIds = isMulti ? Array.from(selectedIds) : [id];
+    const startStates = movingIds
+      .map((mid) => layout.fields.find((f) => f.id === mid))
+      .filter((f): f is LayoutField => !!f && !f.locked)
+      .map((f) => ({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h }));
+
     const startMouseX = ev.clientX;
     const startMouseY = ev.clientY;
-    const startX = field.x;
-    const startY = field.y;
 
     const onMove = (e: MouseEvent) => {
       const dx = ((e.clientX - startMouseX) / rect.width) * 100;
       const dy = ((e.clientY - startMouseY) / rect.height) * 100;
-      const rawX = startX + dx;
-      const rawY = startY + dy;
-      const { x, y, lines } = computeSnap(field, rawX, rawY);
+      // Snap só aplica em single-drag pra evitar pulos no grupo
+      let snapX = dx;
+      let snapY = dy;
+      let lines = {};
+      if (!isMulti) {
+        const rawX = startStates[0].x + dx;
+        const rawY = startStates[0].y + dy;
+        const snapped = computeSnap(field, rawX, rawY);
+        snapX = snapped.x - startStates[0].x;
+        snapY = snapped.y - startStates[0].y;
+        lines = snapped.lines;
+      }
       setLayout((l) => ({
         ...l,
-        fields: l.fields.map((f) => (f.id === id ? { ...f, x: clamp(x, 0, 100 - field.w), y: clamp(y, 0, 100 - field.h) } : f)),
+        fields: l.fields.map((f) => {
+          const ss = startStates.find((s) => s.id === f.id);
+          if (!ss) return f;
+          const nx = clamp(ss.x + snapX, 0, 100 - ss.w);
+          const ny = clamp(ss.y + snapY, 0, 100 - ss.h);
+          return { ...f, x: nx, y: ny };
+        }),
       }));
       setSnapLines(lines);
     };
@@ -270,7 +372,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [layout.fields, setLayout, commit]);
+  }, [layout.fields, selectedIds, setLayout, commit]);
 
   /* -------------------- RESIZE -------------------- */
   type ResizeDir = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -329,33 +431,41 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       if (meta && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault(); history.redo(); return;
       }
-      if (selectedId && (e.key === 'Delete' || e.key === 'Backspace')) {
-        e.preventDefault(); deleteField(selectedId); return;
+      const ids = Array.from(selectedIds);
+      if (ids.length > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault(); ids.forEach((id) => deleteField(id)); return;
       }
-      if (selectedId && meta && (e.key === 'd' || e.key === 'D')) {
-        e.preventDefault(); duplicateField(selectedId); return;
+      if (ids.length > 0 && meta && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault(); ids.forEach((id) => duplicateField(id)); return;
       }
-      if (selectedId && meta && e.key === ']') {
-        e.preventDefault(); moveZ(selectedId, e.shiftKey ? 'front' : 'forward'); return;
+      if (primaryId && meta && e.key === ']') {
+        e.preventDefault(); moveZ(primaryId, e.shiftKey ? 'front' : 'forward'); return;
       }
-      if (selectedId && meta && e.key === '[') {
-        e.preventDefault(); moveZ(selectedId, e.shiftKey ? 'back' : 'backward'); return;
+      if (primaryId && meta && e.key === '[') {
+        e.preventDefault(); moveZ(primaryId, e.shiftKey ? 'back' : 'backward'); return;
       }
-      if (selectedId && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (ids.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
         const step = e.shiftKey ? 5 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        const f = layout.fields.find((x) => x.id === selectedId);
-        if (f && !f.locked) {
-          updateField(selectedId, { x: clamp(f.x + dx, 0, 100 - f.w), y: clamp(f.y + dy, 0, 100 - f.h) });
-          commit();
-        }
+        ids.forEach((id) => {
+          const f = layout.fields.find((x) => x.id === id);
+          if (f && !f.locked) {
+            updateField(id, { x: clamp(f.x + dx, 0, 100 - f.w), y: clamp(f.y + dy, 0, 100 - f.h) });
+          }
+        });
+        commit();
+      }
+      // Escape limpa seleção
+      if (e.key === 'Escape' && ids.length > 0) {
+        e.preventDefault();
+        setSelectedId(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, history, deleteField, duplicateField, moveZ, layout.fields, updateField, commit]);
+  }, [primaryId, selectedIds, history, deleteField, duplicateField, moveZ, layout.fields, updateField, commit]);
 
   /* -------------------- SAVE -------------------- */
   const handleSave = async () => {
@@ -417,6 +527,18 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
             disabled={bgUploading}
             onFile={handleBackgroundUpload}
           />
+          <button
+            onClick={() => setLibraryOpen({
+              kind: 'background',
+              onPick: (key, url) => {
+                setLayout((l) => ({ ...l, background: { type: 'image', src: url, cover: false } }));
+                commit();
+              },
+            })}
+            className="btn-secondary btn-sm w-full mt-2 text-xs"
+          >
+            📁 Da biblioteca…
+          </button>
           {layout.background?.type !== 'color' && (
             <button
               onClick={() => { setLayout((l) => ({ ...l, background: { type: 'color', src: '#ffffff' } })); commit(); }}
@@ -550,10 +672,72 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
           <div className="mb-3 px-3 py-2 bg-[rgb(var(--danger-soft))] text-[rgb(var(--danger))] text-sm rounded-md">{errorMsg}</div>
         )}
 
+        {/* ALIGN/DISTRIBUTE TOOLBAR — só aparece com 2+ selecionados */}
+        {selectedIds.size >= 2 && (
+          <div className="mb-3 flex items-center gap-1 flex-wrap p-2 bg-[rgb(var(--brand-soft))] border border-[rgb(var(--brand))]/30 rounded-md">
+            <span className="text-xs font-semibold text-[rgb(var(--brand))] mr-2">{selectedIds.size} selecionados</span>
+            <button onClick={() => alignFields('left')} className="btn-secondary btn-sm" title="Alinhar à esquerda">⫷</button>
+            <button onClick={() => alignFields('centerH')} className="btn-secondary btn-sm" title="Centralizar horizontal">↔</button>
+            <button onClick={() => alignFields('right')} className="btn-secondary btn-sm" title="Alinhar à direita">⫸</button>
+            <span className="mx-1 h-5 w-px bg-[rgb(var(--border))]" />
+            <button onClick={() => alignFields('top')} className="btn-secondary btn-sm" title="Alinhar topo">⊤</button>
+            <button onClick={() => alignFields('centerV')} className="btn-secondary btn-sm" title="Centralizar vertical">↕</button>
+            <button onClick={() => alignFields('bottom')} className="btn-secondary btn-sm" title="Alinhar base">⊥</button>
+            <span className="mx-1 h-5 w-px bg-[rgb(var(--border))]" />
+            {selectedIds.size >= 3 && (
+              <>
+                <button onClick={() => alignFields('distH')} className="btn-secondary btn-sm" title="Distribuir horizontal">⊜H</button>
+                <button onClick={() => alignFields('distV')} className="btn-secondary btn-sm" title="Distribuir vertical">⊜V</button>
+              </>
+            )}
+            <button onClick={() => setSelectedId(null)} className="btn-ghost btn-sm ml-auto">Limpar</button>
+          </div>
+        )}
+
         <div className="flex items-start justify-center min-h-full">
           <div
             ref={canvasRef}
             onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
+            onMouseDown={(e) => {
+              if (e.target !== e.currentTarget) return;
+              const canvas = canvasRef.current;
+              if (!canvas) return;
+              const rect = canvas.getBoundingClientRect();
+              const startX = ((e.clientX - rect.left) / rect.width) * 100;
+              const startY = ((e.clientY - rect.top) / rect.height) * 100;
+              setMarquee({ x: startX, y: startY, w: 0, h: 0 });
+              const onMove = (ev: MouseEvent) => {
+                const cx = ((ev.clientX - rect.left) / rect.width) * 100;
+                const cy = ((ev.clientY - rect.top) / rect.height) * 100;
+                const x = Math.min(startX, cx);
+                const y = Math.min(startY, cy);
+                const w = Math.abs(cx - startX);
+                const h = Math.abs(cy - startY);
+                setMarquee({ x, y, w, h });
+              };
+              const onUp = (ev: MouseEvent) => {
+                const cx = ((ev.clientX - rect.left) / rect.width) * 100;
+                const cy = ((ev.clientY - rect.top) / rect.height) * 100;
+                const x = Math.min(startX, cx);
+                const y = Math.min(startY, cy);
+                const w = Math.abs(cx - startX);
+                const h = Math.abs(cy - startY);
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                setMarquee(null);
+                if (w < 1 && h < 1) return;
+                // Seleciona todos fields que intersectam
+                const inside = layout.fields.filter((f) =>
+                  !(f.x + f.w < x || f.x > x + w || f.y + f.h < y || f.y > y + h)
+                ).map((f) => f.id);
+                if (inside.length > 0) {
+                  setSelectedIds(new Set(inside));
+                  setPrimaryId(inside[0]);
+                }
+              };
+              window.addEventListener('mousemove', onMove);
+              window.addEventListener('mouseup', onUp);
+            }}
             style={{
               ...canvasStyle,
               background: layout.background?.type === 'color'
@@ -579,16 +763,50 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
               <FieldOnCanvas
                 key={f.id}
                 field={f}
-                selected={selectedId === f.id}
-                onClick={(e) => { e.stopPropagation(); setSelectedId(f.id); }}
+                selected={selectedIds.has(f.id)}
+                primary={primaryId === f.id}
+                onClick={(e) => handleFieldClick(f.id, e)}
                 onDragStart={(e) => handleDrag(f.id, e)}
                 onResizeStart={(dir, e) => handleResize(f.id, dir as any, e)}
                 onInlineEdit={(content) => { updateField(f.id, { content }); commit(); }}
               />
             ))}
+
+            {/* Marquee selection box */}
+            {marquee && (marquee.w > 0.5 || marquee.h > 0.5) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${marquee.x}%`,
+                  top: `${marquee.y}%`,
+                  width: `${marquee.w}%`,
+                  height: `${marquee.h}%`,
+                  border: '1.5px dashed #1B2D5E',
+                  background: 'rgba(27,45,94,0.06)',
+                  pointerEvents: 'none',
+                  zIndex: 1100,
+                }}
+              />
+            )}
           </div>
         </div>
       </main>
+
+      {/* ASSET LIBRARY MODAL */}
+      <AssetLibraryModal
+        open={!!libraryOpen}
+        kindFilter={libraryOpen?.kind}
+        onClose={() => setLibraryOpen(null)}
+        onSelect={(key, url) => libraryOpen?.onPick(key, url)}
+        onUploadNew={async (file) => {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('kind', libraryOpen?.kind ?? 'misc');
+          const r = await fetch('/api/internal/assets/upload', { method: 'POST', body: fd });
+          const data = await r.json();
+          return data.ok ? { key: data.key, url: data.url } : null;
+        }}
+      />
 
       {/* RIGHT INSPECTOR */}
       <aside className="card overflow-y-auto">
@@ -636,10 +854,11 @@ function defaultLayout(): LayoutV2 {
 }
 
 function FieldOnCanvas({
-  field, selected, onClick, onDragStart, onResizeStart, onInlineEdit,
+  field, selected, primary = false, onClick, onDragStart, onResizeStart, onInlineEdit,
 }: {
   field: LayoutField;
   selected: boolean;
+  primary?: boolean;
   onClick: (e: React.MouseEvent) => void;
   onDragStart: (e: React.MouseEvent) => void;
   onResizeStart: (dir: string, e: React.MouseEvent) => void;
@@ -660,7 +879,7 @@ function FieldOnCanvas({
     width: `${field.w}%`,
     height: `${field.h}%`,
     containerType: 'size',                           // habilita cqh
-    border: selected ? '2px solid #1B2D5E' : isHidden ? '1px dashed rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.18)',
+    border: primary ? '2px solid #1B2D5E' : selected ? '2px solid #06B6D4' : isHidden ? '1px dashed rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.18)',
     background: selected ? 'rgba(27,45,94,0.05)' : 'transparent',
     opacity: isHidden ? 0.4 : 1,
     cursor: field.locked ? 'not-allowed' : 'move',
@@ -715,7 +934,7 @@ function FieldOnCanvas({
       }}
     >
       {inner}
-      {selected && !field.locked && (
+      {primary && !field.locked && (
         <>
           {(['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const).map((dir) => (
             <ResizeHandle key={dir} dir={dir} onMouseDown={(e) => onResizeStart(dir, e)} />

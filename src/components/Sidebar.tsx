@@ -222,12 +222,21 @@ export default function Sidebar({
           )}
         </a>
 
-        {/* Workspace switcher */}
-        {currentWorkspace && workspaces && workspaces.length > 0 && (
+        {/* Workspace switcher (S23) — fallback mostra nome do ws atual */}
+        {currentWorkspace && workspaces && workspaces.length > 0 ? (
           <div className="px-2 py-2 border-b border-[rgb(var(--border))]">
             <WorkspaceSwitcher current={currentWorkspace} workspaces={workspaces} collapsed={collapsed} />
           </div>
-        )}
+        ) : currentWorkspace ? (
+          <div className="px-3 py-2 border-b border-[rgb(var(--border))] text-xs text-[rgb(var(--fg-muted))] truncate">
+            <span className="opacity-60">WS:</span> <span className="font-medium text-[rgb(var(--fg))]">{currentWorkspace.name}</span>
+            <span className="ml-1 opacity-60">· {currentWorkspace.role}</span>
+          </div>
+        ) : workspaceName !== 'UniverCert' ? (
+          <div className="px-3 py-2 border-b border-[rgb(var(--border))] text-xs text-[rgb(var(--fg-muted))] truncate">
+            <span className="opacity-60">WS:</span> <span className="font-medium text-[rgb(var(--fg))]">{workspaceName}</span>
+          </div>
+        ) : null}
 
         {/* Sections */}
         <nav className="flex-1 overflow-y-auto py-3 space-y-3">

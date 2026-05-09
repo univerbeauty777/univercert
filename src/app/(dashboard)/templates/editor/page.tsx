@@ -1,10 +1,11 @@
-// UniverCert · /templates/editor (Sprint 21)
+// UniverCert · /templates/editor (Sprint 21 / S22d hotfix UX)
 // Editor V2 GODMODE: import-first + zones drag
 
 import { eq, and } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { templates } from '@/db/schema';
-import { requireRole, RbacError } from '@/lib/rbac';
+import { requireRole, RbacError, getCurrentSession } from '@/lib/rbac';
 import type { LayoutV2 } from '@/lib/layout-v2';
 import PageHeader from '@/components/PageHeader';
 import EditorWrapper from './EditorWrapper';
@@ -22,7 +23,28 @@ export default async function TemplateEditorPage({
     sess = await requireRole('editor');
   } catch (e) {
     if (e instanceof RbacError) {
-      return <main className="page"><div className="card text-center py-16"><p className="text-sm text-[rgb(var(--fg-muted))]">Sem permissão (editor+).</p></div></main>;
+      if (e.code === 'UNAUTHENTICATED') {
+        redirect('/sign-in?next=/templates/editor');
+      }
+      // FORBIDDEN — pega role atual + workspace pra UI clara
+      const cur = await getCurrentSession().catch(() => null);
+      const role = cur?.member.role ?? 'desconhecido';
+      const wsName = cur?.workspace.name ?? 'workspace atual';
+      return (
+        <main className="page">
+          <div className="card text-center py-16 mx-auto" style={{ maxWidth: 480 }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+            <h2 className="text-base font-semibold mb-2">Sem permissão pra editar templates</h2>
+            <p className="text-sm text-[rgb(var(--fg-muted))] mb-1">
+              Sua role em <strong>{wsName}</strong>: <code style={{ background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: 6 }}>{role}</code>
+            </p>
+            <p className="text-sm text-[rgb(var(--fg-muted))] mb-4">
+              Necessário <strong>editor</strong> ou superior. Peça pra um admin do workspace promover sua role, ou troque de workspace na sidebar.
+            </p>
+            <a href="/templates" className="btn-primary btn-sm" style={{ borderRadius: 10 }}>← Voltar pra galeria</a>
+          </div>
+        </main>
+      );
     }
     throw e;
   }
