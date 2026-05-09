@@ -37,13 +37,29 @@ async function handler(request: Request) {
 
   try {
     const auth = getAuth();
-    return await auth.handler(request);
+    const resp = await auth.handler(request);
+    // Sprint 19 hotfix DEBUG: se Better Auth retornar 500 com body vazio
+    // (o que vem acontecendo), capturamos e expomos info pra debug.
+    // REMOVER esse bloco após consertar o bug do signup.
+    if (resp.status >= 500 && resp.headers.get('content-length') === '0') {
+      const debugInfo = {
+        error: 'better_auth_silent_500',
+        path,
+        method: request.method,
+        status: resp.status,
+        message: 'Better Auth retornou 500 sem body. Veja workers logs.',
+        hint: 'Provavelmente schema mismatch — algum campo NOT NULL faltando ou coluna inexistente',
+      };
+      return Response.json(debugInfo, { status: 500 });
+    }
+    return resp;
   } catch (e) {
     console.error('[auth handler error]', (e as Error)?.message, (e as Error)?.stack);
     return Response.json(
       {
-        error: 'auth_internal',
-        message: 'Erro interno na autenticação. Tente novamente em instantes.',
+        error: 'auth_internal_throw',
+        message: (e as Error)?.message,
+        stack: (e as Error)?.stack?.split('\n').slice(0, 8),
       },
       { status: 500 },
     );

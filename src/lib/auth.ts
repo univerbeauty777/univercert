@@ -101,7 +101,9 @@ export function getAuth() {
       },
     },
     onAPIError: {
-      throw: false,
+      // Sprint 19 hotfix DEBUG: bubble errors → handler em route.ts captura e expõe.
+      // Voltar pra false depois de consertar o signup.
+      throw: true,
       onError: (err: unknown) => {
         // eslint-disable-next-line no-console
         console.error('[better-auth][api-error]', (err as Error)?.message, (err as Error)?.stack);
