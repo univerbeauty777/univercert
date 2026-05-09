@@ -114,14 +114,48 @@ export const certificateRequests = sqliteTable(
     sourceDataJson: text('source_data_json'),
     courseName: text('course_name'),
     courseHours: integer('course_hours'),
-    status: text('status', { enum: ['pending', 'approved', 'rejected', 'emitted'] }).notNull().default('pending'),
+    courseId: text('course_id'),                                              // S22 — opcional FK pra courses
+    status: text('status').notNull().default('pending'),                      // S22 — relax enum: 'pending' | 'approved' | 'rejected' | 'emitted' | 'needs_revision'
     reviewerId: text('reviewer_id').references(() => users.id),
     reviewedAt: integer('reviewed_at'),
     rejectionReason: text('rejection_reason'),
+    extrasJson: text('extras_json'),                                          // S22 — respostas do form
+    revisionsJson: text('revisions_json'),                                    // S22 — historico [{by, at, comment, fields}]
+    requestToken: text('request_token'),                                      // S22 — magic link reenvio
+    submitterEmail: text('submitter_email'),                                  // S22 — email confirmado
+    submitterName: text('submitter_name'),
     createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
   },
   (t) => ({
     queueIdx: index('idx_requests_workspace_status').on(t.workspaceId, t.status, t.createdAt),
+    courseIdx: index('idx_requests_course').on(t.courseId, t.status),
+    tokenIdx: index('idx_requests_token').on(t.requestToken),
+    emailIdx: index('idx_requests_email').on(t.submitterEmail),
+  }),
+);
+
+// 21. COURSES (S22 — entidade formal de curso por workspace)
+export const courses = sqliteTable(
+  'courses',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    hours: integer('hours'),
+    defaultTemplateId: text('default_template_id').references(() => templates.id, { onDelete: 'set null' }),
+    requirementsJson: text('requirements_json'),
+    vertical: text('vertical'),
+    isPublic: integer('is_public').notNull().default(1),
+    isActive: integer('is_active').notNull().default(1),
+    autoApprove: integer('auto_approve').notNull().default(0),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsSlugIdx: uniqueIndex('idx_courses_ws_slug').on(t.workspaceId, t.slug),
+    wsActiveIdx: index('idx_courses_ws_active').on(t.workspaceId, t.isActive),
   }),
 );
 

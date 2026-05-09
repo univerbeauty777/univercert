@@ -125,6 +125,7 @@ const SECTIONS: NavSection[] = [
   {
     label: 'Personalização',
     items: [
+      { href: '/courses', label: 'Cursos', icon: Icon.award },
       { href: '/templates', label: 'Templates', icon: Icon.brush },
       { href: '/workflows', label: 'Workflows', icon: Icon.zap },
       { href: '/domain', label: 'Domínio', icon: Icon.globe },
