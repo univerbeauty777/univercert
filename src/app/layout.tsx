@@ -67,8 +67,17 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-icon.png',
+    icon: [
+      { url: '/icon', type: 'image/png', sizes: '64x64' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon',
+    apple: [
+      { url: '/apple-icon', type: 'image/png', sizes: '180x180' },
+    ],
+    other: [
+      { rel: 'mask-icon', url: '/icon.svg', color: '#1B2D5E' },
+    ],
   },
   formatDetection: {
     email: false,
@@ -78,7 +87,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#6366f1',
+  themeColor: '#1B2D5E',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
