@@ -8,6 +8,8 @@ import { issueCredentialFromRequest, rejectRequest as rejectRequestFn } from '@/
 import { notifyRecipient } from '@/lib/notify';
 import { sendEmail } from '@/lib/resend';
 import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
+import { dispatchWebhook } from '@/lib/webhook-dispatcher';
+import { ID } from '@/lib/ulid';
 
 export async function requestRevisionAction(requestId: string, comment: string) {
   try {
@@ -98,6 +100,20 @@ export async function approveRequestAction(requestId: string) {
     // Notify in background (não bloqueia)
     if (!alreadyEmitted) {
       notifyRecipient(credential.id).catch((e) => console.error('notify failed:', e));
+      // S40b: dispatch webhook event
+      dispatchWebhook(credential.workspaceId, {
+        event: 'cert.issued',
+        id: ID.shareEvent(), // reuso ULID gen
+        occurred_at: Math.floor(Date.now() / 1000),
+        workspace_id: credential.workspaceId,
+        data: {
+          credential_id: credential.id,
+          course_name: credential.courseName,
+          recipient_id: credential.recipientId,
+          status: credential.status,
+          issued_at: credential.issuedAt,
+        },
+      }).catch((e) => console.error('webhook dispatch failed:', e));
     }
     revalidatePath('/queue');
     revalidatePath('/dashboard');

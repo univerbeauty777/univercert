@@ -25,6 +25,28 @@ const NAV_SHORTCUTS: Result[] = [
   { kind: 'template', id: 'nav-team', label: 'Equipe', sub: 'membros do workspace', href: '/team' },
   { kind: 'template', id: 'nav-billing', label: 'Billing', sub: 'plano + uso', href: '/billing' },
   { kind: 'template', id: 'nav-integrations', label: 'Integrações', sub: 'webhooks + Fluent', href: '/integrations' },
+  { kind: 'template', id: 'nav-analytics', label: 'Analytics', sub: 'shares + verificações', href: '/analytics' },
+  { kind: 'template', id: 'nav-marketplace', label: 'Marketplace', sub: 'templates da comunidade', href: '/marketplace' },
+  { kind: 'template', id: 'nav-affiliate', label: 'Afiliados', sub: 'programa de indicação', href: '/affiliate' },
+  { kind: 'template', id: 'nav-branding', label: 'Identidade visual', sub: 'logo, cores, depoimentos', href: '/settings/branding' },
+  { kind: 'template', id: 'nav-apikeys', label: 'API keys', sub: 'integrações via REST', href: '/integrations/api-keys' },
+];
+
+// S77: Slash actions (começam com /)
+type Action = { id: string; label: string; sub: string; icon: string; color: string; href: string };
+const SLASH_ACTIONS: Action[] = [
+  { id: '/emit', label: '/emit · Emitir certificado', sub: 'aprovar pedido pendente', icon: '🏆', color: '#10b981', href: '/queue' },
+  { id: '/new-template', label: '/new template · Novo template', sub: 'criar do zero ou com IA', icon: '📄', color: '#8b5cf6', href: '/templates/new' },
+  { id: '/new-course', label: '/new course · Novo curso', sub: 'cadastrar curso emitível', icon: '🎓', color: '#06B6D4', href: '/courses/new' },
+  { id: '/invite', label: '/invite · Convidar membro', sub: 'adicionar pessoa ao workspace', icon: '👥', color: '#06B6D4', href: '/team' },
+  { id: '/bulk', label: '/bulk · Emissão em massa', sub: 'CSV upload', icon: '📊', color: '#F59E0B', href: '/bulk' },
+  { id: '/verify', label: '/verify · Verificar cert', sub: 'cole ID/hash', icon: '🔍', color: '#10b981', href: '/verificar' },
+  { id: '/upgrade', label: '/upgrade · Mudar plano', sub: 'billing + uso', icon: '⚡', color: '#1B2D5E', href: '/billing' },
+  { id: '/apikey', label: '/apikey · Nova API key', sub: 'integração externa (Pro+)', icon: '🔑', color: '#dc2626', href: '/integrations/api-keys' },
+  { id: '/webhook', label: '/webhook · Novo webhook', sub: 'eventos pra Zapier/N8N', icon: '🔗', color: '#8b5cf6', href: '/integrations/webhooks' },
+  { id: '/audit', label: '/audit · Exportar audit log', sub: 'CSV/JSON compliance', icon: '📋', color: '#64748b', href: '/api/v1/audit/export?format=csv' },
+  { id: '/brand', label: '/brand · Editar identidade', sub: 'logo, cores, depoimentos', icon: '🎨', color: '#F59E0B', href: '/settings/branding' },
+  { id: '/docs', label: '/docs · Documentação API', sub: 'reference completa', icon: '📖', color: '#64748b', href: 'https://univercert.net/docs/api' },
 ];
 
 export default function CommandPalette() {
@@ -56,6 +78,17 @@ export default function CommandPalette() {
   useEffect(() => {
     if (!open) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // S77: Se começa com '/', mostra slash actions
+    if (q.startsWith('/')) {
+      const actionResults: Result[] = SLASH_ACTIONS
+        .filter((a) => a.id.toLowerCase().includes(q.toLowerCase()) || a.label.toLowerCase().includes(q.slice(1).toLowerCase()))
+        .map((a) => ({ kind: 'template' as const, id: a.id, label: a.label, sub: a.sub, href: a.href }));
+      setResults(actionResults.length > 0 ? actionResults : SLASH_ACTIONS.map((a) => ({ kind: 'template' as const, id: a.id, label: a.label, sub: a.sub, href: a.href })));
+      setActive(0);
+      return;
+    }
+
     if (!q.trim()) {
       setResults(NAV_SHORTCUTS);
       setActive(0);
