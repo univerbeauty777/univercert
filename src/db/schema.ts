@@ -479,8 +479,62 @@ export const assets = sqliteTable(
   }),
 );
 
+// 23. SHARE EVENTS (S26 — recipient WOW tracking)
+export const shareEvents = sqliteTable(
+  'share_events',
+  {
+    id: text('id').primaryKey(),
+    credentialId: text('credential_id').notNull().references(() => credentials.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    channel: text('channel').notNull(),
+    ipHash: text('ip_hash'),
+    userAgent: text('user_agent'),
+    referer: text('referer'),
+    occurredAt: integer('occurred_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    credIdx: index('idx_share_events_cred').on(t.credentialId, t.occurredAt),
+    wsIdx: index('idx_share_events_ws').on(t.workspaceId, t.occurredAt),
+    chIdx: index('idx_share_events_channel').on(t.workspaceId, t.channel, t.occurredAt),
+  }),
+);
+
+// 24. WORKSPACE BRAND (S31 — issuer profile pages)
+export const workspaceBrand = sqliteTable('workspace_brand', {
+  workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  displayName: text('display_name'),
+  tagline: text('tagline'),
+  description: text('description'),
+  logoUrl: text('logo_url'),
+  coverUrl: text('cover_url'),
+  brandColor: text('brand_color'),
+  websiteUrl: text('website_url'),
+  socialInstagram: text('social_instagram'),
+  socialYoutube: text('social_youtube'),
+  socialLinkedin: text('social_linkedin'),
+  emailPublic: text('email_public'),
+  showCertCount: integer('show_cert_count').notNull().default(1),
+  showRecentCerts: integer('show_recent_certs').notNull().default(1),
+  showCourses: integer('show_courses').notNull().default(1),
+  testimonialsJson: text('testimonials_json'),
+  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+});
+
+// 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
+export const issuerKeys = sqliteTable('issuer_keys', {
+  workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  did: text('did').notNull(),
+  publicKeyJwk: text('public_key_jwk'),
+  algorithm: text('algorithm').notNull().default('EdDSA'),
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+});
+
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
+export type ShareEvent = typeof shareEvents.$inferSelect;
+export type WorkspaceBrand = typeof workspaceBrand.$inferSelect;
+export type IssuerKey = typeof issuerKeys.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;

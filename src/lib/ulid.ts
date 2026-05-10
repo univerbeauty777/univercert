@@ -29,4 +29,6 @@ export const ID = {
   invite: () => id('inv'),
   emailEvent: () => id('em'),
   errorEvent: () => id('err'),
+  asset: () => id('ast'),
+  shareEvent: () => id('shr'),
 };
