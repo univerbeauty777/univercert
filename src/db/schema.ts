@@ -1,6 +1,6 @@
 // UniverCert · Drizzle schema · espelha D1 univercert-mvp
 
-import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // 1. WORKSPACES
@@ -548,6 +548,74 @@ export const aiJobs = sqliteTable(
   }),
 );
 
+// 27. SUBSCRIPTIONS (S35 — billing)
+export const subscriptions = sqliteTable(
+  'subscriptions',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+    plan: text('plan').notNull().default('free'),
+    status: text('status').notNull().default('active'),
+    provider: text('provider'),
+    providerCustomerId: text('provider_customer_id'),
+    providerSubscriptionId: text('provider_subscription_id'),
+    currentPeriodStart: integer('current_period_start'),
+    currentPeriodEnd: integer('current_period_end'),
+    cancelAtPeriodEnd: integer('cancel_at_period_end').notNull().default(0),
+    trialEndsAt: integer('trial_ends_at'),
+    amountBrlCents: integer('amount_brl_cents'),
+    metadataJson: text('metadata_json'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    statusIdx: index('idx_subs_status').on(t.status, t.currentPeriodEnd),
+    providerIdx: index('idx_subs_provider_id').on(t.provider, t.providerSubscriptionId),
+  }),
+);
+
+// 28. INVOICES (S35)
+export const invoices = sqliteTable(
+  'invoices',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    subscriptionId: text('subscription_id'),
+    provider: text('provider').notNull(),
+    providerInvoiceId: text('provider_invoice_id').notNull(),
+    status: text('status').notNull(),
+    amountBrlCents: integer('amount_brl_cents').notNull(),
+    currency: text('currency').notNull().default('BRL'),
+    description: text('description'),
+    invoicePdfUrl: text('invoice_pdf_url'),
+    paidAt: integer('paid_at'),
+    dueAt: integer('due_at'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_invoices_ws').on(t.workspaceId, t.createdAt),
+    statusIdx: index('idx_invoices_status').on(t.status, t.dueAt),
+  }),
+);
+
+// 29. USAGE METERS (S36 — plan limits)
+export const usageMeters = sqliteTable(
+  'usage_meters',
+  {
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    periodYm: text('period_ym').notNull(),
+    certsEmitted: integer('certs_emitted').notNull().default(0),
+    aiJobsCount: integer('ai_jobs_count').notNull().default(0),
+    aiCostBrlCents: integer('ai_cost_brl_cents').notNull().default(0),
+    storageBytes: integer('storage_bytes').notNull().default(0),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.workspaceId, t.periodYm] }),
+    periodIdx: index('idx_usage_period').on(t.periodYm, t.certsEmitted),
+  }),
+);
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -563,6 +631,9 @@ export type ShareEvent = typeof shareEvents.$inferSelect;
 export type WorkspaceBrand = typeof workspaceBrand.$inferSelect;
 export type IssuerKey = typeof issuerKeys.$inferSelect;
 export type AiJob = typeof aiJobs.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type UsageMeter = typeof usageMeters.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;

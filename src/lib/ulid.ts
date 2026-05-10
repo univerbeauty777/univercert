@@ -32,4 +32,6 @@ export const ID = {
   asset: () => id('ast'),
   shareEvent: () => id('shr'),
   aiJob: () => id('aij'),
+  subscription: () => id('sub'),
+  invoice: () => id('inv2'),
 };
