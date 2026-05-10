@@ -616,6 +616,33 @@ export const usageMeters = sqliteTable(
   }),
 );
 
+// 30. API KEYS (S39 — bearer auth pra /api/v1)
+export const apiKeys = sqliteTable(
+  'api_keys',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    createdByUserId: text('created_by_user_id'),
+    name: text('name').notNull(),
+    prefix: text('prefix').notNull(),
+    hash: text('hash').notNull(),
+    scope: text('scope').notNull().default('read'),
+    lastUsedAt: integer('last_used_at'),
+    lastUsedIp: text('last_used_ip'),
+    requestCount: integer('request_count').notNull().default(0),
+    expiresAt: integer('expires_at'),
+    revokedAt: integer('revoked_at'),
+    revokedReason: text('revoked_reason'),
+    metadataJson: text('metadata_json'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_api_keys_ws').on(t.workspaceId, t.createdAt),
+    hashIdx: uniqueIndex('idx_api_keys_hash').on(t.hash),
+    activeIdx: index('idx_api_keys_active').on(t.workspaceId, t.revokedAt, t.expiresAt),
+  }),
+);
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -634,6 +661,7 @@ export type AiJob = typeof aiJobs.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type UsageMeter = typeof usageMeters.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;

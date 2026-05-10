@@ -34,4 +34,5 @@ export const ID = {
   aiJob: () => id('aij'),
   subscription: () => id('sub'),
   invoice: () => id('inv2'),
+  apiKey: () => id('apk'),
 };

@@ -18,6 +18,9 @@ export function getAuth() {
 
   const googleClientId = (env as any).GOOGLE_OAUTH_CLIENT_ID;
   const googleClientSecret = (env as any).GOOGLE_OAUTH_CLIENT_SECRET;
+  const microsoftClientId = (env as any).MICROSOFT_OAUTH_CLIENT_ID;
+  const microsoftClientSecret = (env as any).MICROSOFT_OAUTH_CLIENT_SECRET;
+  const microsoftTenantId = (env as any).MICROSOFT_OAUTH_TENANT_ID || 'common';
 
   cachedAuth = betterAuth({
     database: drizzleAdapter(db, {
@@ -63,15 +66,20 @@ export function getAuth() {
       maxPasswordLength: 128,
       autoSignIn: true,
     },
-    socialProviders:
-      googleClientId && googleClientSecret
+    socialProviders: {
+      ...(googleClientId && googleClientSecret
+        ? { google: { clientId: googleClientId, clientSecret: googleClientSecret } }
+        : {}),
+      ...(microsoftClientId && microsoftClientSecret
         ? {
-            google: {
-              clientId: googleClientId,
-              clientSecret: googleClientSecret,
+            microsoft: {
+              clientId: microsoftClientId,
+              clientSecret: microsoftClientSecret,
+              tenantId: microsoftTenantId,
             },
           }
-        : undefined,
+        : {}),
+    } as any,
     secret: (env as any).BETTER_AUTH_SECRET || 'dev-only-change-me-NOT-FOR-PROD',
     // Sprint 19 hotfix: NÃO hardcoda domínio.
     // Better Auth detecta baseURL via request origin quando undefined.
