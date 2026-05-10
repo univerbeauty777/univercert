@@ -754,6 +754,79 @@ export const embedViews = sqliteTable(
   }),
 );
 
+// 36. WEBHOOK ENDPOINTS (S40)
+export const webhookEndpoints = sqliteTable(
+  'webhook_endpoints',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    createdByUserId: text('created_by_user_id'),
+    name: text('name').notNull(),
+    url: text('url').notNull(),
+    secret: text('secret').notNull(),
+    eventsJson: text('events_json').notNull(),
+    status: text('status').notNull().default('active'),
+    totalDeliveries: integer('total_deliveries').notNull().default(0),
+    totalFailures: integer('total_failures').notNull().default(0),
+    lastSuccessAt: integer('last_success_at'),
+    lastFailureAt: integer('last_failure_at'),
+    lastFailureReason: text('last_failure_reason'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_webhook_endpoints_ws').on(t.workspaceId, t.status, t.createdAt),
+  }),
+);
+
+// 37. WEBHOOK DELIVERIES (S40)
+export const webhookDeliveries = sqliteTable(
+  'webhook_deliveries',
+  {
+    id: text('id').primaryKey(),
+    endpointId: text('endpoint_id').notNull().references(() => webhookEndpoints.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    eventType: text('event_type').notNull(),
+    eventId: text('event_id'),
+    payloadJson: text('payload_json').notNull(),
+    responseStatus: integer('response_status'),
+    responseBody: text('response_body'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    nextRetryAt: integer('next_retry_at'),
+    deliveredAt: integer('delivered_at'),
+    durationMs: integer('duration_ms'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    endpointIdx: index('idx_webhook_deliveries_endpoint').on(t.endpointId, t.createdAt),
+    pendingIdx: index('idx_webhook_deliveries_pending').on(t.nextRetryAt, t.attemptCount, t.maxAttempts),
+    eventIdx: index('idx_webhook_deliveries_event').on(t.workspaceId, t.eventType, t.createdAt),
+  }),
+);
+
+// 38. WORKSPACE SECURITY (S41)
+export const workspaceSecurity = sqliteTable('workspace_security', {
+  workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  enforce2fa: integer('enforce_2fa').notNull().default(0),
+  ipAllowlistJson: text('ip_allowlist_json'),
+  apiIpAllowlistJson: text('api_ip_allowlist_json'),
+  sessionMaxMinutes: integer('session_max_minutes').notNull().default(1440),
+  passwordMinLength: integer('password_min_length').notNull().default(8),
+  requireStrongPassword: integer('require_strong_password').notNull().default(0),
+  updatedByUserId: text('updated_by_user_id'),
+  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+});
+
+// 39. USER 2FA (S41)
+export const user2fa = sqliteTable('user_2fa', {
+  userId: text('user_id').primaryKey(),
+  secret: text('secret').notNull(),
+  backupCodesHash: text('backup_codes_hash'),
+  enabledAt: integer('enabled_at').notNull().default(sql`(unixepoch())`),
+  lastUsedAt: integer('last_used_at'),
+});
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),

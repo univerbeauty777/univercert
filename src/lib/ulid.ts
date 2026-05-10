@@ -40,4 +40,6 @@ export const ID = {
   referral: () => id('ref2'),
   partnerApp: () => id('pap'),
   embedView: () => id('ev'),
+  webhookEndpoint: () => id('whe'),
+  webhookDelivery: () => id('whd'),
 };
