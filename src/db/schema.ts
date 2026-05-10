@@ -521,6 +521,33 @@ export const workspaceBrand = sqliteTable('workspace_brand', {
   createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
 });
 
+// 26. AI JOBS (S28 — Claude API calls tracking)
+export const aiJobs = sqliteTable(
+  'ai_jobs',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: text('user_id'),
+    jobType: text('job_type').notNull(),
+    model: text('model').notNull(),
+    status: text('status').notNull().default('pending'),
+    inputSummary: text('input_summary'),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    costBrlCents: integer('cost_brl_cents'),
+    resultJson: text('result_json'),
+    errorMessage: text('error_message'),
+    durationMs: integer('duration_ms'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    completedAt: integer('completed_at'),
+  },
+  (t) => ({
+    wsIdx: index('idx_ai_jobs_ws').on(t.workspaceId, t.createdAt),
+    typeIdx: index('idx_ai_jobs_type').on(t.workspaceId, t.jobType, t.createdAt),
+    statusIdx: index('idx_ai_jobs_status').on(t.status, t.createdAt),
+  }),
+);
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -535,6 +562,7 @@ export type Workspace = typeof workspaces.$inferSelect;
 export type ShareEvent = typeof shareEvents.$inferSelect;
 export type WorkspaceBrand = typeof workspaceBrand.$inferSelect;
 export type IssuerKey = typeof issuerKeys.$inferSelect;
+export type AiJob = typeof aiJobs.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;

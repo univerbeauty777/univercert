@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import Logo from './Logo';
 import DarkModeToggle from './DarkModeToggle';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import CommandPalette from './CommandPalette';
 
 type WorkspaceInfo = { id: string; slug: string; name: string; role: string };
 
@@ -192,6 +193,7 @@ export default function Sidebar({
 
   return (
     <>
+      <CommandPalette />
       {/* Mobile hamburger — fica no canto superior esquerdo */}
       <button
         type="button"

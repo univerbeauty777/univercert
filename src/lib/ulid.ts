@@ -31,4 +31,5 @@ export const ID = {
   errorEvent: () => id('err'),
   asset: () => id('ast'),
   shareEvent: () => id('shr'),
+  aiJob: () => id('aij'),
 };
