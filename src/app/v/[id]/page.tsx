@@ -1,4 +1,4 @@
-// UniverCert · Verify page · Sprint 12 + S26 (CertShareBar mobile-first)
+// UniverCert · Verify page · Sprint 12 + S26 + S60-S63 (white-label)
 
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -9,6 +9,7 @@ import { ID } from '@/lib/ulid';
 import Logo from '@/components/Logo';
 import DarkModeToggle from '@/components/DarkModeToggle';
 import CertShareBar from '@/components/CertShareBar';
+import { getWhiteLabelContext, whiteLabelCss, whiteLabelFooter } from '@/lib/whitelabel';
 
 export const runtime = 'edge';
 
@@ -58,6 +59,9 @@ export default async function VerifyPage({ params }: Params) {
   const isExpired = credential.expiresAt && credential.expiresAt < Math.floor(Date.now() / 1000);
   const isDemo = workspace?.slug === 'demo';
 
+  // S60-S63: white-label context
+  const whiteLabel = await getWhiteLabelContext(credential.workspaceId);
+
   if (!isRevoked) {
     const h = await headers();
     void logView(credential.id, {
@@ -77,9 +81,12 @@ export default async function VerifyPage({ params }: Params) {
       : { label: 'Verificado', icon: '✓', cls: 'bg-gradient-to-r from-success to-emerald-600' };
 
   const linkedinUrl = buildLinkedInUrl(credential, workspace?.name ?? 'UniverCert');
-  const primary = brand?.primaryColor ?? '#1B2D5E';
+  const primary = whiteLabel.brandColor ?? brand?.primaryColor ?? '#1B2D5E';
   const accent = brand?.secondaryColor ?? '#D4A937';
-  const verifyUrl = `https://univercert.net/v/${credential.id}`;
+  // verifyUrl usa host atual (custom domain ou univercert.net)
+  const hostHdrs = await headers();
+  const currentHost = hostHdrs.get('host') ?? 'univercert.net';
+  const verifyUrl = `https://${currentHost}/v/${credential.id}`;
   const issuedDate = new Date(credential.issuedAt * 1000).toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
@@ -191,7 +198,7 @@ export default async function VerifyPage({ params }: Params) {
           </div>
         </div>
 
-        {!isDemo && (
+        {!isDemo && !whiteLabel.hideUniverCertBrand && (
           <div className="mt-10 card-glass text-center py-7 animate-fade-in stagger-3">
             <p className="text-sm text-ink-500 mb-3">Você é uma escola que quer emitir certificados como esse?</p>
             <a href="https://univercert.net/demo" target="_blank" rel="noopener" className="btn-gradient text-sm">
@@ -201,9 +208,13 @@ export default async function VerifyPage({ params }: Params) {
         )}
 
         <div className="text-center mt-7 text-xs text-ink-500">
-          Certificado gerado por{' '}
-          <a href="https://univercert.net" className="text-primary font-bold hover:underline">UniverCert</a>
-          {' · 🇧🇷 feito no Brasil'}
+          {whiteLabel.hideUniverCertBrand ? (
+            <>Certificados de <strong>{whiteLabel.workspaceName}</strong></>
+          ) : (
+            <>Certificado gerado por{' '}
+              <a href="https://univercert.net" className="text-primary font-bold hover:underline">UniverCert</a>
+              {' · 🇧🇷 feito no Brasil'}</>
+          )}
         </div>
       </div>
     </main>

@@ -827,6 +827,29 @@ export const user2fa = sqliteTable('user_2fa', {
   lastUsedAt: integer('last_used_at'),
 });
 
+// 40. WORKSPACE EMAIL DOMAINS (S61 — custom sender)
+export const workspaceEmailDomains = sqliteTable(
+  'workspace_email_domains',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    domain: text('domain').notNull(),
+    fromEmail: text('from_email'),
+    fromName: text('from_name'),
+    resendDomainId: text('resend_domain_id'),
+    status: text('status').notNull().default('pending'),
+    recordsJson: text('records_json'),
+    lastCheckAt: integer('last_check_at'),
+    verifiedAt: integer('verified_at'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_email_domains_ws').on(t.workspaceId, t.status),
+    domainIdx: uniqueIndex('idx_email_domains_domain').on(t.domain),
+  }),
+);
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),

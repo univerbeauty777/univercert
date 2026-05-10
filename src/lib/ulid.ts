@@ -42,4 +42,5 @@ export const ID = {
   embedView: () => id('ev'),
   webhookEndpoint: () => id('whe'),
   webhookDelivery: () => id('whd'),
+  emailDomain: () => id('emd'),
 };
