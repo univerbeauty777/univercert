@@ -136,6 +136,12 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: 'Insights',
+    items: [
+      { href: '/analytics', label: 'Analytics', icon: Icon.zap },
+    ],
+  },
+  {
     label: 'Workspace',
     items: [
       { href: '/team', label: 'Equipe', icon: Icon.team },

@@ -35,6 +35,12 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/queue',
       },
       {
+        name: 'Analytics',
+        short_name: 'Analytics',
+        description: 'Shares + verificações',
+        url: '/analytics',
+      },
+      {
         name: 'Verificar certificado',
         short_name: 'Verificar',
         description: 'Validar autenticidade',
@@ -47,5 +53,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/demo',
       },
     ],
+    // PWA install pode aparecer com prompt customizado (S34)
+    prefer_related_applications: false,
   };
 }
