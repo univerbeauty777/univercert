@@ -35,4 +35,9 @@ export const ID = {
   subscription: () => id('sub'),
   invoice: () => id('inv2'),
   apiKey: () => id('apk'),
+  marketplace: () => id('mkt'),
+  affiliate: () => id('aff'),
+  referral: () => id('ref2'),
+  partnerApp: () => id('pap'),
+  embedView: () => id('ev'),
 };

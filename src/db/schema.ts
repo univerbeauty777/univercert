@@ -643,6 +643,117 @@ export const apiKeys = sqliteTable(
   }),
 );
 
+// 31. TEMPLATE MARKETPLACE (S43)
+export const templateMarketplace = sqliteTable(
+  'template_marketplace',
+  {
+    id: text('id').primaryKey(),
+    sourceTemplateId: text('source_template_id').notNull(),
+    sourceWorkspaceId: text('source_workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    authorUserId: text('author_user_id'),
+    name: text('name').notNull(),
+    description: text('description'),
+    category: text('category').notNull().default('general'),
+    language: text('language').notNull().default('pt'),
+    layoutJson: text('layout_json').notNull(),
+    previewUrl: text('preview_url'),
+    downloads: integer('downloads').notNull().default(0),
+    ratingAvg: integer('rating_avg').notNull().default(0),
+    ratingCount: integer('rating_count').notNull().default(0),
+    status: text('status').notNull().default('pending'),
+    isPremium: integer('is_premium').notNull().default(0),
+    priceBrlCents: integer('price_brl_cents').notNull().default(0),
+    rejectedReason: text('rejected_reason'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    approvedAt: integer('approved_at'),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    statusIdx: index('idx_marketplace_status').on(t.status, t.downloads),
+    categoryIdx: index('idx_marketplace_category').on(t.status, t.category, t.downloads),
+    authorIdx: index('idx_marketplace_author').on(t.authorUserId, t.createdAt),
+  }),
+);
+
+// 32. AFFILIATES (S44)
+export const affiliates = sqliteTable('affiliates', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+  code: text('code').notNull().unique(),
+  tier: text('tier').notNull().default('standard'),
+  commissionPct: integer('commission_pct').notNull().default(10),
+  payoutMethod: text('payout_method'),
+  payoutDetailsJson: text('payout_details_json'),
+  totalSignups: integer('total_signups').notNull().default(0),
+  totalPayingReferred: integer('total_paying_referred').notNull().default(0),
+  totalCommissionBrlCents: integer('total_commission_brl_cents').notNull().default(0),
+  totalPaidBrlCents: integer('total_paid_brl_cents').notNull().default(0),
+  status: text('status').notNull().default('active'),
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+});
+
+// 33. REFERRALS (S44)
+export const referrals = sqliteTable(
+  'referrals',
+  {
+    id: text('id').primaryKey(),
+    affiliateId: text('affiliate_id').notNull().references(() => affiliates.id, { onDelete: 'cascade' }),
+    referredUserId: text('referred_user_id'),
+    referredWorkspaceId: text('referred_workspace_id'),
+    status: text('status').notNull().default('signup'),
+    firstPaymentAt: integer('first_payment_at'),
+    totalPaidByReferredBrlCents: integer('total_paid_by_referred_brl_cents').notNull().default(0),
+    commissionEarnedBrlCents: integer('commission_earned_brl_cents').notNull().default(0),
+    source: text('source'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    affIdx: index('idx_referrals_affiliate').on(t.affiliateId, t.status, t.createdAt),
+    userIdx: index('idx_referrals_user').on(t.referredUserId),
+  }),
+);
+
+// 34. PARTNER APPLICATIONS (S45)
+export const partnerApplications = sqliteTable(
+  'partner_applications',
+  {
+    id: text('id').primaryKey(),
+    userEmail: text('user_email').notNull(),
+    fullName: text('full_name').notNull(),
+    audienceSize: integer('audience_size'),
+    niche: text('niche'),
+    channelsJson: text('channels_json'),
+    motivation: text('motivation'),
+    status: text('status').notNull().default('pending'),
+    affiliateId: text('affiliate_id'),
+    reviewedBy: text('reviewed_by'),
+    reviewedAt: integer('reviewed_at'),
+    rejectedReason: text('rejected_reason'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    statusIdx: index('idx_partner_apps_status').on(t.status, t.createdAt),
+  }),
+);
+
+// 35. EMBED VIEWS (S46)
+export const embedViews = sqliteTable(
+  'embed_views',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    variant: text('variant').notNull().default('badge'),
+    refererDomain: text('referer_domain'),
+    userAgent: text('user_agent'),
+    ipHash: text('ip_hash'),
+    occurredAt: integer('occurred_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    wsIdx: index('idx_embed_views_ws').on(t.workspaceId, t.occurredAt),
+    refererIdx: index('idx_embed_views_referer').on(t.workspaceId, t.refererDomain, t.occurredAt),
+  }),
+);
+
 // 25. ISSUER KEYS (S29 — Open Badges 3.0 / W3C VC signing)
 export const issuerKeys = sqliteTable('issuer_keys', {
   workspaceId: text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -662,6 +773,11 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type UsageMeter = typeof usageMeters.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
+export type TemplateMarketplace = typeof templateMarketplace.$inferSelect;
+export type Affiliate = typeof affiliates.$inferSelect;
+export type Referral = typeof referrals.$inferSelect;
+export type PartnerApplication = typeof partnerApplications.$inferSelect;
+export type EmbedView = typeof embedViews.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 export type ErrorEvent = typeof errorEvents.$inferSelect;
 export type User = typeof users.$inferSelect;
