@@ -19,15 +19,24 @@ export default function SignInPage() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await signIn.email({ email, password, callbackURL: '/dashboard' });
+      const { error, data } = await signIn.email({ email, password, callbackURL: '/dashboard' });
       if (error) {
-        setError(error.message ?? 'Email ou senha incorretos');
+        // Sprint S22d hotfix: exibe codigo + status pra debug ('senha certa mas falha')
+        const code = (error as any).code ? ` [${(error as any).code}]` : '';
+        const status = (error as any).status ? ` (HTTP ${(error as any).status})` : '';
+        const msg = error.message ?? 'Email ou senha incorretos';
+        setError(`${msg}${code}${status}`);
+        // eslint-disable-next-line no-console
+        console.error('[sign-in] error', error);
         setLoading(false);
       } else {
         window.location.href = '/dashboard';
       }
     } catch (err) {
-      setError((err as Error).message);
+      const e = err as Error;
+      setError(`Erro: ${e.message}`);
+      // eslint-disable-next-line no-console
+      console.error('[sign-in] throw', e);
       setLoading(false);
     }
   };
@@ -88,6 +97,9 @@ export default function SignInPage() {
           <div>
             <label className="label" htmlFor="password">Senha</label>
             <input id="password" type="password" className="input" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} />
+          </div>
+          <div className="text-right">
+            <a href="/forgot-password" className="text-xs text-primary hover:underline">Esqueci minha senha</a>
           </div>
           <button type="submit" disabled={loading} className="btn-gradient w-full justify-center">
             {loading ? (
