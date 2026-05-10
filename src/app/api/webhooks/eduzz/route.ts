@@ -1,5 +1,5 @@
 // UniverCert · webhook Eduzz
-// URL: https://univercert.com.br/api/webhooks/eduzz?ws=univerhair
+// URL: https://univercert.net/api/webhooks/eduzz?ws=univerhair
 
 import { processWebhook, getWebhookSecret, resolveWorkspaceFromQuery } from '@/lib/webhook-handler';
 import { verifyHmacSha256 } from '@/lib/hmac';

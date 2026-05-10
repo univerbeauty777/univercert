@@ -12,7 +12,7 @@ function getCfCredentials() {
   const apiToken = (env as any).CLOUDFLARE_API_TOKEN as string | undefined;
   const zoneId = (env as any).CLOUDFLARE_ZONE_ID as string | undefined;
   if (!apiToken) throw new Error('CLOUDFLARE_API_TOKEN missing');
-  if (!zoneId) throw new Error('CLOUDFLARE_ZONE_ID missing (zone do univercert.com.br)');
+  if (!zoneId) throw new Error('CLOUDFLARE_ZONE_ID missing (zone do univercert.net)');
   return { accountId, apiToken, zoneId };
 }
 

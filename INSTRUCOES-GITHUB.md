@@ -45,10 +45,10 @@ git push -u origin main
 
 Cada `git push` na `main` dispara deploy automático.
 
-## 5. Apontar o domínio (quando registrar univercert.com.br)
+## 5. Apontar o domínio (quando registrar univercert.net)
 
-1. Cloudflare dashboard → o site `univercert.com.br` (precisa estar no Cloudflare como zona)
-2. Pages → seu projeto `univercert` → Custom domains → Setup a custom domain → `univercert.com.br`
+1. Cloudflare dashboard → o site `univercert.net` (precisa estar no Cloudflare como zona)
+2. Pages → seu projeto `univercert` → Custom domains → Setup a custom domain → `univercert.net`
 3. Cloudflare cria os DNS automaticamente
 
 ---

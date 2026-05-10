@@ -7,7 +7,7 @@ export type CertShareData = {
   issuerName: string;
   issueDateISO: string;     // YYYY-MM-DD
   expiresDateISO?: string;  // YYYY-MM-DD opcional
-  certUrl: string;          // url publica do verify (ex: https://univercert.com.br/c/abc123)
+  certUrl: string;          // url publica do verify (ex: https://univercert.net/c/abc123)
   credentialId: string;
   pdfUrl?: string;
   hours?: number;

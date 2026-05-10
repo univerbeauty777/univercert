@@ -8,7 +8,7 @@ import {
 export class UniverCertApi implements ICredentialType {
   name = 'univerCertApi';
   displayName = 'UniverCert API';
-  documentationUrl = 'https://univercert.com.br/docs/api';
+  documentationUrl = 'https://univercert.net/docs/api';
 
   properties: INodeProperties[] = [
     {
@@ -25,8 +25,8 @@ export class UniverCertApi implements ICredentialType {
       displayName: 'Base URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'https://univercert.com.br',
-      description: 'Use https://staging.univercert.com.br pra testes',
+      default: 'https://univercert.net',
+      description: 'Use https://staging.univercert.net pra testes',
     },
   ];
 

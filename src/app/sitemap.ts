@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next';
 export const runtime = 'edge';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://univercert.com.br';
+  const base = 'https://univercert.net';
   const now = new Date();
 
   return [

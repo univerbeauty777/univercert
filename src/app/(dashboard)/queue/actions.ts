@@ -45,7 +45,7 @@ export async function requestRevisionAction(requestId: string, comment: string) 
     // Email pro aluno com magic link
     const email = row.req.submitterEmail;
     if (email && row.course && row.ws && row.req.requestToken) {
-      const url = `https://univercert.com.br/solicitar/${row.ws.slug}/${row.course.slug}?revise=${row.req.requestToken}`;
+      const url = `https://univercert.net/solicitar/${row.ws.slug}/${row.course.slug}?revise=${row.req.requestToken}`;
       const html = `
 <!doctype html><html><body style="margin:0;padding:0;background:#f9fafb;font-family:Inter,Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f9fafb;">

@@ -6,7 +6,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 const RESEND_API = 'https://api.resend.com/emails';
 
 // Fallback do Resend pra quem ainda nao verificou dominio proprio (so sandbox).
-// Quando dominio univercert.com.br for verificado, troca pra noreply@univercert.com.br.
+// Quando dominio univercert.net for verificado, troca pra noreply@univercert.net.
 const FALLBACK_FROM = 'UniverCert <onboarding@resend.dev>';
 
 export type SendEmailInput = {

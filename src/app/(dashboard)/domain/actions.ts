@@ -11,7 +11,7 @@ import { addCustomHostname, deleteCustomHostname, findCustomHostnameByName } fro
 import { requireRole, RbacError } from '@/lib/rbac';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
-const RESERVED_BASES = ['univercert.com.br', 'univercert.pages.dev', 'localhost'];
+const RESERVED_BASES = ['univercert.net', 'univercert.pages.dev', 'localhost'];
 
 export async function addDomainAction(args: { workspaceId: string; hostname: string }) {
   const hostname = args.hostname.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '').trim();

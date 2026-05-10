@@ -23,8 +23,8 @@ export const AVAILABLE_VARS = [
   { key: 'courseName', label: 'Nome do curso', example: 'Alisamento Profissional' },
   { key: 'courseHours', label: 'Carga horária', example: '40' },
   { key: 'workspaceName', label: 'Nome da escola', example: 'UniverHair' },
-  { key: 'verifyUrl', label: 'URL de verificação', example: 'https://univercert.com.br/v/cred_ABC' },
-  { key: 'pdfUrl', label: 'URL do PDF', example: 'https://univercert.com.br/api/v1/credentials/cred_ABC/pdf' },
+  { key: 'verifyUrl', label: 'URL de verificação', example: 'https://univercert.net/v/cred_ABC' },
+  { key: 'pdfUrl', label: 'URL do PDF', example: 'https://univercert.net/api/v1/credentials/cred_ABC/pdf' },
   { key: 'credentialId', label: 'ID do certificado', example: 'cred_ABC123' },
   { key: 'issuedAt', label: 'Data de emissão', example: '8 de maio de 2026' },
 ] as const;
@@ -37,8 +37,8 @@ const SAMPLE_VARS: WorkflowVars = {
   courseName: 'Alisamento Profissional',
   courseHours: 40,
   workspaceName: 'UniverHair',
-  verifyUrl: 'https://univercert.com.br/v/cred_ABC123',
-  pdfUrl: 'https://univercert.com.br/api/v1/credentials/cred_ABC123/pdf',
+  verifyUrl: 'https://univercert.net/v/cred_ABC123',
+  pdfUrl: 'https://univercert.net/api/v1/credentials/cred_ABC123/pdf',
   credentialId: 'cred_ABC123',
   issuedAt: '8 de maio de 2026',
 };

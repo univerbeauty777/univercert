@@ -3,7 +3,7 @@
 // Para certificados, escutamos PURCHASE_APPROVED ou PURCHASE_COMPLETE.
 // HMAC: Hotmart envia x-hotmart-hottok no header (token estático) — validamos isso ao invés de signature.
 //
-// URL: https://univercert.com.br/api/webhooks/hotmart?ws=univerhair
+// URL: https://univercert.net/api/webhooks/hotmart?ws=univerhair
 
 import { processWebhook, getWebhookSecret, resolveWorkspaceFromQuery } from '@/lib/webhook-handler';
 

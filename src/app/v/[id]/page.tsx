@@ -79,7 +79,7 @@ export default async function VerifyPage({ params }: Params) {
   const linkedinUrl = buildLinkedInUrl(credential, workspace?.name ?? 'UniverCert');
   const primary = brand?.primaryColor ?? '#1B2D5E';
   const accent = brand?.secondaryColor ?? '#D4A937';
-  const verifyUrl = `https://univercert.com.br/v/${credential.id}`;
+  const verifyUrl = `https://univercert.net/v/${credential.id}`;
   const issuedDate = new Date(credential.issuedAt * 1000).toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
@@ -194,7 +194,7 @@ export default async function VerifyPage({ params }: Params) {
         {!isDemo && (
           <div className="mt-10 card-glass text-center py-7 animate-fade-in stagger-3">
             <p className="text-sm text-ink-500 mb-3">Você é uma escola que quer emitir certificados como esse?</p>
-            <a href="https://univercert.com.br/demo" target="_blank" rel="noopener" className="btn-gradient text-sm">
+            <a href="https://univercert.net/demo" target="_blank" rel="noopener" className="btn-gradient text-sm">
               🧪 Testar grátis em 30 segundos →
             </a>
           </div>
@@ -202,7 +202,7 @@ export default async function VerifyPage({ params }: Params) {
 
         <div className="text-center mt-7 text-xs text-ink-500">
           Certificado gerado por{' '}
-          <a href="https://univercert.com.br" className="text-primary font-bold hover:underline">UniverCert</a>
+          <a href="https://univercert.net" className="text-primary font-bold hover:underline">UniverCert</a>
           {' · 🇧🇷 feito no Brasil'}
         </div>
       </div>
@@ -242,7 +242,7 @@ function buildLinkedInUrl(cred: { courseName: string; issuedAt: number; id: stri
   const params = new URLSearchParams({
     startTask: 'CERTIFICATION_NAME', name: cred.courseName, organizationName,
     issueYear: String(issuedAt.getFullYear()), issueMonth: String(issuedAt.getMonth() + 1),
-    certUrl: `https://univercert.com.br/v/${cred.id}`, certId: cred.id,
+    certUrl: `https://univercert.net/v/${cred.id}`, certId: cred.id,
   });
   return `https://www.linkedin.com/profile/add?${params.toString()}`;
 }

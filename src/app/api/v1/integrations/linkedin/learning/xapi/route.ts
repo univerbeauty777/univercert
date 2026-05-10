@@ -61,9 +61,9 @@ export async function GET(req: Request) {
         category: [{ id: 'https://w3id.org/xapi/cmi5/context/categories/cmi5' }],
       },
       extensions: {
-        'https://univercert.com.br/xapi/credential-id': cred.id,
-        'https://univercert.com.br/xapi/verify-url': `${baseUrl}/v/${cred.id}`,
-        'https://univercert.com.br/xapi/badge-url': `${baseUrl}/api/v1/credentials/${cred.id}/badge`,
+        'https://univercert.net/xapi/credential-id': cred.id,
+        'https://univercert.net/xapi/verify-url': `${baseUrl}/v/${cred.id}`,
+        'https://univercert.net/xapi/badge-url': `${baseUrl}/api/v1/credentials/${cred.id}/badge`,
       },
     },
     authority: {

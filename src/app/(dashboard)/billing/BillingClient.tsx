@@ -141,7 +141,7 @@ export default function BillingClient({ userEmail, workspaceName }: { userEmail:
                   {p.features.slice(0, 6).map((f, i) => (<li key={i}>✓ {f}</li>))}
                 </ul>
                 {pid === 'enterprise' ? (
-                  <a href="mailto:contato@univercert.com.br" className="btn-primary btn-sm w-full text-center" style={{ borderRadius: 10, display: 'block' }}>Falar com vendas</a>
+                  <a href="mailto:contato@univercert.net" className="btn-primary btn-sm w-full text-center" style={{ borderRadius: 10, display: 'block' }}>Falar com vendas</a>
                 ) : isCurrent ? (
                   <button disabled className="btn-ghost btn-sm w-full" style={{ borderRadius: 10 }}>Plano atual</button>
                 ) : pid === 'free' ? null : (

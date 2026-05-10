@@ -200,7 +200,7 @@ export default function ApiKeysClient() {
       <div className="card" style={{ padding: 20, background: 'rgba(99,102,241,0.04)' }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>📘 Como usar</div>
         <pre style={{ fontSize: 12, fontFamily: 'monospace', background: '#0f172a', color: '#a7f3d0', padding: 14, borderRadius: 8, overflow: 'auto', margin: 0 }}>
-{`curl https://univercert.com.br/api/v1/credentials \\
+{`curl https://univercert.net/api/v1/credentials \\
   -H "Authorization: Bearer uc_live_XXXXXX..."`}
         </pre>
         <p style={{ fontSize: 11, color: 'rgb(var(--fg-muted))', marginTop: 8 }}>

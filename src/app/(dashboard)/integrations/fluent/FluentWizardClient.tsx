@@ -20,7 +20,7 @@ type Props = {
   templateOptions: { id: string; name: string }[];
 };
 
-const APP_BASE = typeof window !== 'undefined' ? window.location.origin : 'https://univercert.com.br';
+const APP_BASE = typeof window !== 'undefined' ? window.location.origin : 'https://univercert.net';
 
 export default function FluentWizardClient({
   workspaceSlug,
@@ -90,7 +90,7 @@ export default function FluentWizardClient({
       event: 'course.completed',
       event_id: 'test_' + Date.now(),
       course: { name: 'Curso de Teste UniverCert', hours: 8 },
-      student: { name: 'Aluno Teste', email: 'teste@univercert.com.br' },
+      student: { name: 'Aluno Teste', email: 'teste@univercert.net' },
       is_test: true,
     };
     try {
@@ -325,7 +325,7 @@ export default function FluentWizardClient({
               <li><a href="/queue" className="text-[rgb(var(--brand))] underline">/queue</a> — request aparece (pending ou approved se auto)</li>
               <li><a href="/credentials" className="text-[rgb(var(--brand))] underline">/credentials</a> — cert criado se auto_approve=on</li>
               <li><a href="/admin/health" className="text-[rgb(var(--brand))] underline">/admin/health</a> — email aparece em "Emails recentes"</li>
-              <li><a href={`/embed/student/teste@univercert.com.br?ws=${workspaceSlug}`} target="_blank" rel="noopener" className="text-[rgb(var(--brand))] underline">/embed/student/teste@univercert.com.br</a> — embed widget mostra o cert</li>
+              <li><a href={`/embed/student/teste@univercert.net?ws=${workspaceSlug}`} target="_blank" rel="noopener" className="text-[rgb(var(--brand))] underline">/embed/student/teste@univercert.net</a> — embed widget mostra o cert</li>
             </ul>
           </div>
 

@@ -22,7 +22,7 @@ const app = new Hono().basePath('/api/v1');
 
 // CORS — apenas origens conhecidas (produção + preview + dev local)
 const ALLOWED_ORIGINS = [
-  'https://univercert.com.br',
+  'https://univercert.net',
   'https://univercert.pages.dev',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
@@ -33,8 +33,8 @@ app.use(
     origin: (origin) => {
       if (!origin) return ALLOWED_ORIGINS[0]; // server-to-server requests
       if (ALLOWED_ORIGINS.includes(origin)) return origin;
-      // Permitir subdomínios *.univercert.com.br (white-label)
-      if (origin.endsWith('.univercert.com.br')) return origin;
+      // Permitir subdomínios *.univercert.net (white-label)
+      if (origin.endsWith('.univercert.net')) return origin;
       // Preview deployments do Cloudflare Pages
       if (origin.endsWith('.univercert.pages.dev')) return origin;
       return ALLOWED_ORIGINS[0]; // bloqueia (CORS irá rejeitar fetch)
@@ -66,7 +66,7 @@ app.get('/', (c) =>
   c.json({
     name: 'UniverCert API',
     version: '0.10.1',
-    docs: 'https://developer.univercert.com.br',
+    docs: 'https://developer.univercert.net',
     sprints_completed: ['S0', 'S1', 'S1.5', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S9', 'S10'],
   }),
 );
@@ -225,7 +225,7 @@ app.get('/credentials/:id/pdf', async (c) => {
     credentialId: row.credential.id,
     hashSha256: row.credential.hashSha256,
     workspaceName: row.workspace?.name ?? 'UniverCert',
-    verifyUrl: `https://univercert.com.br/v/${row.credential.id}`,
+    verifyUrl: `https://univercert.net/v/${row.credential.id}`,
     primaryColor: row.brand?.primaryColor ?? undefined,
     accentColor: row.brand?.secondaryColor ?? undefined,
     variant,
@@ -274,8 +274,8 @@ app.get('/credentials/:id/openbadge.json', async (c) => {
     issuedAt: row.credential.issuedAt,
     expiresAt: row.credential.expiresAt,
     workspaceName: row.workspace?.name ?? 'UniverCert',
-    workspaceUrl: 'https://univercert.com.br',
-    verifyUrl: `https://univercert.com.br/v/${row.credential.id}`,
+    workspaceUrl: 'https://univercert.net',
+    verifyUrl: `https://univercert.net/v/${row.credential.id}`,
   });
 
   return c.json(badge, 200, {
@@ -407,7 +407,7 @@ app.get('/templates/custom/:id/preview', async (c) => {
     credentialId: 'cred_PREVIEW_EXAMPLE',
     hashSha256: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
     workspaceName: 'UniverCert',
-    verifyUrl: 'https://univercert.com.br/v/preview',
+    verifyUrl: 'https://univercert.net/v/preview',
     variant: 'custom',
     customLayoutJson: tpl.layoutJson,
   });
@@ -442,7 +442,7 @@ app.get('/templates/:variant/preview', async (c) => {
     credentialId: 'cred_PREVIEW_EXAMPLE_ID_2026',
     hashSha256: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
     workspaceName: c.req.query('workspace') ?? 'UniverCert',
-    verifyUrl: 'https://univercert.com.br/v/preview',
+    verifyUrl: 'https://univercert.net/v/preview',
     variant,
     primaryColor: primary && /^#[0-9A-Fa-f]{6}$/.test(primary) ? primary : undefined,
     accentColor: accent && /^#[0-9A-Fa-f]{6}$/.test(accent) ? accent : undefined,

@@ -16,7 +16,7 @@ export default function TermosPage() {
 
       <h2>1. Aceitação</h2>
       <p>
-        Ao acessar ou utilizar a plataforma UniverCert (<strong>univercert.com.br</strong>), operada
+        Ao acessar ou utilizar a plataforma UniverCert (<strong>univercert.net</strong>), operada
         por <strong>DXPRO Univerbeauty Tecnologia LTDA</strong>, você concorda com estes Termos de
         Uso e com a nossa Política de Privacidade.
       </p>

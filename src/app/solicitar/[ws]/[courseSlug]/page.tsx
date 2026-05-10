@@ -97,7 +97,7 @@ export default async function SolicitarPage({
         />
 
         <footer style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: '#9ca3af' }}>
-          Powered by <a href="https://univercert.com.br" style={{ color: '#1B2D5E', textDecoration: 'none', fontWeight: 600 }}>UniverCert</a>
+          Powered by <a href="https://univercert.net" style={{ color: '#1B2D5E', textDecoration: 'none', fontWeight: 600 }}>UniverCert</a>
         </footer>
       </div>
     </main>

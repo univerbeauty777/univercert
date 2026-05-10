@@ -2,7 +2,7 @@
 // Disparado quando aluno completa um curso na Fluent.
 // HMAC obrigatório se integration tiver webhook_secret configurado.
 //
-// URL config no Fluent: https://univercert.com.br/api/webhooks/fluent?ws=univerhair
+// URL config no Fluent: https://univercert.net/api/webhooks/fluent?ws=univerhair
 //
 // Payload esperado (formato canônico que UniverHair vai postar do plugin WP):
 // {

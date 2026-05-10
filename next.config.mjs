@@ -13,7 +13,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.r2.cloudflarestorage.com' },
-      { protocol: 'https', hostname: '**.univercert.com.br' },
+      { protocol: 'https', hostname: '**.univercert.net' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },

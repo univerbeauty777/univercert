@@ -50,9 +50,9 @@ npm install n8n-nodes-univercert
 
 ## Links
 
-- UniverCert: https://univercert.com.br
-- API docs: https://univercert.com.br/docs/api
-- Support: contato@univercert.com.br
+- UniverCert: https://univercert.net
+- API docs: https://univercert.net/docs/api
+- Support: contato@univercert.net
 
 ## License
 

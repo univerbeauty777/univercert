@@ -30,7 +30,7 @@ export default async function DemoResultPage({ params }: Params) {
   if (!row || !row.credential || row.workspace?.slug !== 'demo') notFound();
 
   const { credential, recipient } = row;
-  const verifyUrl = `https://univercert.com.br/v/${credential.id}`;
+  const verifyUrl = `https://univercert.net/v/${credential.id}`;
   const issuedDate = new Date(credential.issuedAt * 1000).toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });

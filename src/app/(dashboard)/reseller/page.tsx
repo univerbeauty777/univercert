@@ -32,7 +32,7 @@ export default function ResellerPage() {
               Você se torna parceiro UniverCert (gratuito · sem mensalidade)
             </Step>
             <Step n={2}>
-              Indica clientes pelo seu link único (ex: <code>univercert.com.br/r/voceabc</code>)
+              Indica clientes pelo seu link único (ex: <code>univercert.net/r/voceabc</code>)
             </Step>
             <Step n={3}>
               Cliente assina via seu link → você ganha <strong>30% recorrente</strong> sobre tudo

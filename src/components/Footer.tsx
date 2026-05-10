@@ -66,7 +66,7 @@ export default function Footer() {
               <FooterLink href="/verificar">🔐 Verificar certificado</FooterLink>
               <FooterLink href="/sign-up">Criar conta grátis</FooterLink>
               <FooterLink href="/uh/solicitar">Pedir certificado</FooterLink>
-              <FooterLink href="https://developer.univercert.com.br">API Docs</FooterLink>
+              <FooterLink href="https://developer.univercert.net">API Docs</FooterLink>
             </ul>
           </div>
 

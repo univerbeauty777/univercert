@@ -56,8 +56,8 @@ export async function notifyRecipient(credentialId: string): Promise<SendResult>
       to: recipientEmail,
       recipientName: recipient?.name ?? 'Aluno',
       courseName: credential.courseName ?? 'seu curso',
-      verifyUrl: `https://univercert.com.br/v/${credential.id}`,
-      pdfUrl: `https://univercert.com.br/api/v1/credentials/${credential.id}/pdf`,
+      verifyUrl: `https://univercert.net/v/${credential.id}`,
+      pdfUrl: `https://univercert.net/api/v1/credentials/${credential.id}/pdf`,
       workspaceId: credential.workspaceId,
       credentialId: credential.id,
     });

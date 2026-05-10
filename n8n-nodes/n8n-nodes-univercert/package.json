@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "description": "UniverCert nodes for n8n - emit/manage digital certificates from any workflow",
   "license": "MIT",
-  "homepage": "https://univercert.com.br",
+  "homepage": "https://univercert.net",
   "author": {
     "name": "UniverCert",
-    "email": "contato@univercert.com.br"
+    "email": "contato@univercert.net"
   },
   "repository": {
     "type": "git",

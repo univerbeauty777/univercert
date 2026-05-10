@@ -68,7 +68,7 @@ const FIELD_PREVIEWS: Record<FieldKey, string> = {
   cpf: '123.456.789-00',
   issuedAt: '8 de maio de 2026',
   workspaceName: 'UniverCert',
-  verifyUrl: 'univercert.com.br/v/abc',
+  verifyUrl: 'univercert.net/v/abc',
   credentialId: 'cred_ABC123',
 };
 

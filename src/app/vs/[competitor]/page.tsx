@@ -184,9 +184,9 @@ export default async function ComparisonPage({ params }: Params) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'UniverCert', item: 'https://univercert.com.br' },
-      { '@type': 'ListItem', position: 2, name: 'Comparativos', item: 'https://univercert.com.br/vs' },
-      { '@type': 'ListItem', position: 3, name: `vs ${c.name}`, item: `https://univercert.com.br/vs/${competitor}` },
+      { '@type': 'ListItem', position: 1, name: 'UniverCert', item: 'https://univercert.net' },
+      { '@type': 'ListItem', position: 2, name: 'Comparativos', item: 'https://univercert.net/vs' },
+      { '@type': 'ListItem', position: 3, name: `vs ${c.name}`, item: `https://univercert.net/vs/${competitor}` },
     ],
   };
 

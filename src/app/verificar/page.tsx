@@ -161,7 +161,7 @@ export default async function VerifyHubPage({ searchParams }: Params) {
 
           <div className="grid md:grid-cols-3 gap-5">
             <Step n={1} title="Hash SHA-256 imutável" desc="Cada certificado é gerado com hash criptográfico do conteúdo. Mudar uma letra muda o hash inteiro." />
-            <Step n={2} title="URL pública 24/7" desc="O cert tem uma URL única (univercert.com.br/v/cred_...) que valida em segundos." />
+            <Step n={2} title="URL pública 24/7" desc="O cert tem uma URL única (univercert.net/v/cred_...) que valida em segundos." />
             <Step n={3} title="Open Badges 3.0" desc="Padrão IMS Global. Recrutadores, RHs e plataformas internacionais validam automaticamente." />
           </div>
         </div>

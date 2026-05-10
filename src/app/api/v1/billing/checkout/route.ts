@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: 'plan invalido (use starter/pro/enterprise)' }, { status: 400 });
   }
   if (body.plan === 'enterprise') {
-    return Response.json({ ok: false, error: 'enterprise eh custom — fala com vendas em contato@univercert.com.br' }, { status: 400 });
+    return Response.json({ ok: false, error: 'enterprise eh custom — fala com vendas em contato@univercert.net' }, { status: 400 });
   }
 
   const plan = getPlan(body.plan);

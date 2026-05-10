@@ -19,7 +19,7 @@ const SAMPLE = {
   date: '8 de maio de 2026',
   city: 'Belo Horizonte',
   workspaceName: 'UniverHair',
-  verifyUrl: 'https://univercert.com.br/v/cred_DEMO',
+  verifyUrl: 'https://univercert.net/v/cred_DEMO',
   credentialId: 'cred_DEMO',
 };
 

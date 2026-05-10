@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS workspace_brand (
 -- Issuer page DID (Decentralized Identifier) pra Open Badges 3.0 / W3C VC
 CREATE TABLE IF NOT EXISTS issuer_keys (
   workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
-  did TEXT NOT NULL,                                 -- did:web:univercert.com.br:escola:slug
+  did TEXT NOT NULL,                                 -- did:web:univercert.net:escola:slug
   public_key_jwk TEXT,                               -- JWK pub key (issuer pode publicar)
   -- private key NEVER stored — assinatura via Cloudflare Workers Web Crypto API
   algorithm TEXT NOT NULL DEFAULT 'EdDSA',

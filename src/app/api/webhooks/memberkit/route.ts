@@ -2,7 +2,7 @@
 // Documentação: https://memberkit.com.br/help/api/webhooks
 // Header: X-Memberkit-Signature (HMAC-SHA256 hex do body)
 //
-// URL: https://univercert.com.br/api/webhooks/memberkit?ws=univerhair
+// URL: https://univercert.net/api/webhooks/memberkit?ws=univerhair
 
 import { processWebhook, getWebhookSecret, resolveWorkspaceFromQuery } from '@/lib/webhook-handler';
 import { verifyHmacSha256 } from '@/lib/hmac';

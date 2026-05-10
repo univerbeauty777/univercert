@@ -6,7 +6,7 @@ export const authClient = createAuthClient({
   baseURL:
     typeof window !== 'undefined'
       ? window.location.origin
-      : 'https://univercert.com.br',
+      : 'https://univercert.net',
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

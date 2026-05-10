@@ -83,10 +83,10 @@ export function getAuth() {
     secret: (env as any).BETTER_AUTH_SECRET || 'dev-only-change-me-NOT-FOR-PROD',
     // Sprint 19 hotfix: NÃO hardcoda domínio.
     // Better Auth detecta baseURL via request origin quando undefined.
-    // Antes: 'https://univercert.com.br' quebrava login em pages.dev.
+    // Antes: 'https://univercert.net' quebrava login em pages.dev.
     baseURL: (env as any).BETTER_AUTH_URL || undefined,
     trustedOrigins: [
-      'https://univercert.com.br',
+      'https://univercert.net',
       'https://univercert.pages.dev',
       'https://*.univercert.pages.dev', // preview deploys
       'http://localhost:3000',

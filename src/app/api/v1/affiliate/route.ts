@@ -37,7 +37,7 @@ export async function GET() {
       totalCommissionBrlCents: aff.totalCommissionBrlCents, totalPaidBrlCents: aff.totalPaidBrlCents,
     },
     referrals: refs,
-    trackUrl: `https://univercert.com.br/api/v1/affiliate/track?ref=${aff.code}&redirect=/`,
+    trackUrl: `https://univercert.net/api/v1/affiliate/track?ref=${aff.code}&redirect=/`,
   });
 }
 

@@ -256,7 +256,7 @@ export default function CourseEditorClient({ workspaceSlug, templateOptions, ini
             <h3 className="text-sm font-semibold mb-2">Como compartilhar</h3>
             <p className="text-[rgb(var(--fg-muted))] mb-2">URL pra aluno solicitar cert:</p>
             <code className="block px-2 py-1.5 bg-[rgb(var(--surface-2))] rounded text-[10px] font-mono break-all">
-              {`https://univercert.com.br/solicitar/${workspaceSlug}/${slug || initial.slug}`}
+              {`https://univercert.net/solicitar/${workspaceSlug}/${slug || initial.slug}`}
             </code>
           </div>
         )}

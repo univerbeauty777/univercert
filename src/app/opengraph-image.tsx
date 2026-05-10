@@ -85,7 +85,7 @@ export default async function Image() {
         >
           <span>🇧🇷 Pix · Boleto · WhatsApp</span>
           <span style={{ color: 'white', opacity: 0.5 }}>·</span>
-          <span style={{ color: 'white' }}>univercert.com.br</span>
+          <span style={{ color: 'white' }}>univercert.net</span>
         </div>
       </div>
     ),

@@ -7,7 +7,7 @@ import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 // Cloudflare Pages exige edge runtime
 export const runtime = 'edge';
 
-const SITE_URL = 'https://univercert.com.br';
+const SITE_URL = 'https://univercert.net';
 const SITE_NAME = 'UniverCert';
 const SITE_TITLE = 'UniverCert · Certificados digitais brasileiros';
 const SITE_DESCRIPTION =

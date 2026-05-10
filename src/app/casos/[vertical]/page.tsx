@@ -261,9 +261,9 @@ export default async function VerticalPage({ params }: Params) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'UniverCert', item: 'https://univercert.com.br' },
-      { '@type': 'ListItem', position: 2, name: 'Casos de uso', item: 'https://univercert.com.br/casos' },
-      { '@type': 'ListItem', position: 3, name: v.name, item: `https://univercert.com.br/casos/${vertical}` },
+      { '@type': 'ListItem', position: 1, name: 'UniverCert', item: 'https://univercert.net' },
+      { '@type': 'ListItem', position: 2, name: 'Casos de uso', item: 'https://univercert.net/casos' },
+      { '@type': 'ListItem', position: 3, name: v.name, item: `https://univercert.net/casos/${vertical}` },
     ],
   };
 

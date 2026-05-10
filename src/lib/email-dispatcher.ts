@@ -10,7 +10,7 @@ import { ID } from '@/lib/ulid';
 
 type TriggerEvent = 'credential.issued' | 'credential.revoked' | 'request.created' | 'request.submitted' | 'request.needs_revision' | 'nps.d7';
 
-const APP_BASE = 'https://univercert.com.br';
+const APP_BASE = 'https://univercert.net';
 
 /**
  * Cria as variaveis a partir de credential + workspace.
@@ -224,8 +224,8 @@ export async function sendTestEmail(args: {
     courseName: 'Curso de teste',
     courseHours: 40,
     workspaceName: 'UniverCert',
-    verifyUrl: 'https://univercert.com.br/v/cred_TEST',
-    pdfUrl: 'https://univercert.com.br/api/v1/credentials/cred_TEST/pdf',
+    verifyUrl: 'https://univercert.net/v/cred_TEST',
+    pdfUrl: 'https://univercert.net/api/v1/credentials/cred_TEST/pdf',
     credentialId: 'cred_TEST',
     issuedAt: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
     ...(args.vars ?? {}),

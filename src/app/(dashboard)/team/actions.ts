@@ -16,7 +16,7 @@ const VALID_ROLES: Role[] = ['admin', 'editor', 'aprovador', 'viewer'];
 
 function getOrigin(): string {
   // Best effort — em prod usa NEXT_PUBLIC_APP_URL ou request origin
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://univercert.com.br';
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://univercert.net';
 }
 
 function rand32(): string {

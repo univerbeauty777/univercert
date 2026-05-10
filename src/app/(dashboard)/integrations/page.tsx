@@ -29,7 +29,7 @@ export default async function IntegrationsPage() {
     .where(eq(integrations.workspaceId, workspaceId));
 
   const existingByProvider = new Map(existing.map((i) => [i.provider, i]));
-  const baseUrl = 'https://univercert.com.br';
+  const baseUrl = 'https://univercert.net';
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-6">

@@ -1,7 +1,7 @@
 // UniverCert · webhook Kiwify (compra aprovada)
 // Header: x-kiwify-signature
 //
-// URL: https://univercert.com.br/api/webhooks/kiwify?ws=univerhair
+// URL: https://univercert.net/api/webhooks/kiwify?ws=univerhair
 
 import { processWebhook, getWebhookSecret, resolveWorkspaceFromQuery } from '@/lib/webhook-handler';
 import { verifyHmacSha256 } from '@/lib/hmac';

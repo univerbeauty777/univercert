@@ -184,7 +184,7 @@ function EmbedShell({
         </header>
         {children}
         <div className="embed-footer">
-          Powered by <a href="https://univercert.com.br" target="_blank" rel="noopener">UniverCert</a> · plataforma brasileira de certificados verificáveis
+          Powered by <a href="https://univercert.net" target="_blank" rel="noopener">UniverCert</a> · plataforma brasileira de certificados verificáveis
         </div>
       </div>
     </>

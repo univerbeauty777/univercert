@@ -49,7 +49,7 @@ echo
 echo "============================================================="
 echo "DEPOIS — TESTA /sign-up:"
 echo "============================================================="
-echo "  https://univercert.com.br/sign-up"
+echo "  https://univercert.net/sign-up"
 echo "  → cria sua conta admin"
 echo "  → vai cair no /onboarding (5 steps)"
 echo "  → depois testa /workflows /team /domain /verificar"

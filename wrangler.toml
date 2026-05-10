@@ -49,7 +49,7 @@ binding = "BROWSER"
 # ----------------------------------------
 [vars]
 APP_NAME = "UniverCert"
-APP_URL = "https://univercert.com.br"
+APP_URL = "https://univercert.net"
 DEFAULT_LOCALE = "pt-BR"
 SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
 
@@ -73,12 +73,12 @@ SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
 # Routes — produção
 # ----------------------------------------
 # [[routes]]
-# pattern = "univercert.com.br/*"
-# zone_name = "univercert.com.br"
+# pattern = "univercert.net/*"
+# zone_name = "univercert.net"
 
 # [[routes]]
-# pattern = "*.univercert.com.br/*"  # multi-tenant subdomain (white-label)
-# zone_name = "univercert.com.br"
+# pattern = "*.univercert.net/*"  # multi-tenant subdomain (white-label)
+# zone_name = "univercert.net"
 
 # ----------------------------------------
 # Queues — para emissão em lote (free 1M ops/mês)

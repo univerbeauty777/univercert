@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       UniverCert × FluentCommunity
- * Plugin URI:        https://univercert.com.br
+ * Plugin URI:        https://univercert.net
  * Description:       Emite certificado UniverCert automaticamente quando aluno conclui curso no FluentCommunity. Inclui shortcode [univercert_certificates] pra mostrar certificados do aluno no perfil.
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            UniverCert
- * Author URI:        https://univercert.com.br
+ * Author URI:        https://univercert.net
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       univercert-fluent
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 
 define('UNIVERCERT_FLUENT_VERSION', '1.0.0');
 define('UNIVERCERT_FLUENT_OPT', 'univercert_fluent_settings');
-define('UNIVERCERT_FLUENT_DEFAULT_API', 'https://univercert.com.br');
+define('UNIVERCERT_FLUENT_DEFAULT_API', 'https://univercert.net');
 
 /* =============================================================================
  * 1. SETTINGS PAGE
