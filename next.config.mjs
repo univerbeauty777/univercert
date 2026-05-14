@@ -9,6 +9,7 @@ const nextConfig = {
 
   experimental: {
     typedRoutes: false,
+    optimizePackageImports: ['better-auth', 'drizzle-orm', 'hono', 'zod'],
   },
   images: {
     remotePatterns: [
