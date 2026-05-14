@@ -10,14 +10,14 @@ const PLANS = [
   { id: 'enterprise', name: 'Enterprise', price: 'R$ 1.497', features: ['Ilimitado', 'SSO/SAML', 'Multi-tenant', 'Reseller', 'SLA 99.9%'] },
 ] as const;
 
-export default function BillingPlans({ currentPlan, workspaceId }: { currentPlan: string; workspaceId: string }) {
+export default function BillingPlans({ currentPlan }: { currentPlan: string }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = (plan: 'starter' | 'pro' | 'enterprise') => {
     setError(null);
     startTransition(async () => {
-      const result = await startCheckoutAction({ plan, workspaceId });
+      const result = await startCheckoutAction({ plan });
       if (result.ok && result.initPoint) {
         window.location.href = result.initPoint;
       } else {

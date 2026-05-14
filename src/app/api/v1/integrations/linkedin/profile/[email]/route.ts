@@ -2,7 +2,7 @@
 // Retorna estrutura compativel com LinkedIn 'Education & Certifications' import
 // Empresas usam pra sincronizar certs dos colaboradores em massa.
 
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces } from '@/db/schema';
 
@@ -20,17 +20,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ email: string }
   if (rcps.length === 0) return Response.json({ ok: true, email: decoded, certifications: [] });
 
   const rcpIds = rcps.map((r) => r.id);
+  const rcpIdSet = new Set(rcpIds);
   const certs = await db.select({
     id: credentials.id, courseName: credentials.courseName, status: credentials.status,
     issuedAt: credentials.issuedAt, courseHours: credentials.courseHours, workspaceId: credentials.workspaceId,
+    recipientId: credentials.recipientId,
   }).from(credentials)
-    .where(and(eq(credentials.status, 'issued')))
+    .where(and(eq(credentials.status, 'issued'), inArray(credentials.recipientId, rcpIds)))
     .orderBy(desc(credentials.issuedAt))
     .limit(50);
 
-  const filtered = certs.filter((c) => rcps.some((r) => r.id));
+  const filtered = certs.filter((c) => c.recipientId && rcpIdSet.has(c.recipientId));
   const wsIds = [...new Set(filtered.map((c) => c.workspaceId))];
-  const wsRows = await db.select().from(workspaces).where(eq(workspaces.id, wsIds[0] ?? '')).limit(1);
+  const wsRows = wsIds.length > 0
+    ? await db.select().from(workspaces).where(inArray(workspaces.id, wsIds))
+    : [];
   const wsMap = new Map(wsRows.map((w) => [w.id, w]));
   const baseUrl = new URL(req.url).origin;
 

@@ -80,7 +80,13 @@ export function getAuth() {
           }
         : {}),
     } as any,
-    secret: (env as any).BETTER_AUTH_SECRET || 'dev-only-change-me-NOT-FOR-PROD',
+    secret: (() => {
+      const s = (env as any).BETTER_AUTH_SECRET;
+      if (!s || typeof s !== 'string' || s.length < 32) {
+        throw new Error('BETTER_AUTH_SECRET is required (>=32 chars). Set via `wrangler secret put BETTER_AUTH_SECRET`.');
+      }
+      return s;
+    })(),
     // Sprint 19 hotfix: NÃO hardcoda domínio.
     // Better Auth detecta baseURL via request origin quando undefined.
     // Antes: 'https://univercert.net' quebrava login em pages.dev.

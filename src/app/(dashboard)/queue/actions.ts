@@ -7,11 +7,18 @@ import { certificateRequests, courses, workspaces } from '@/db/schema';
 import { issueCredentialFromRequest, rejectRequest as rejectRequestFn } from '@/lib/credentials';
 import { notifyRecipient } from '@/lib/notify';
 import { sendEmail } from '@/lib/resend';
-import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
 import { dispatchWebhook } from '@/lib/webhook-dispatcher';
 import { ID } from '@/lib/ulid';
+import { requireRole, RbacError } from '@/lib/rbac';
 
 export async function requestRevisionAction(requestId: string, comment: string) {
+  let sess;
+  try {
+    sess = await requireRole('aprovador');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: e.code };
+    throw e;
+  }
   try {
     const db = getDb();
     const [row] = await db
@@ -22,6 +29,7 @@ export async function requestRevisionAction(requestId: string, comment: string) 
       .where(eq(certificateRequests.id, requestId))
       .limit(1);
     if (!row?.req) return { ok: false as const, error: 'request nao encontrada' };
+    if (row.req.workspaceId !== sess.workspace.id) return { ok: false as const, error: 'FORBIDDEN' };
 
     // Anota historico
     let history: any[] = [];
@@ -95,8 +103,24 @@ function escapeHtml(s: string): string {
 }
 
 export async function approveRequestAction(requestId: string) {
+  let sess;
   try {
-    const { credential, alreadyEmitted } = await issueCredentialFromRequest(requestId, null);
+    sess = await requireRole('aprovador');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: e.code };
+    throw e;
+  }
+  try {
+    const db = getDb();
+    const [reqRow] = await db
+      .select({ workspaceId: certificateRequests.workspaceId })
+      .from(certificateRequests)
+      .where(eq(certificateRequests.id, requestId))
+      .limit(1);
+    if (!reqRow) return { ok: false as const, error: 'request_not_found' };
+    if (reqRow.workspaceId !== sess.workspace.id) return { ok: false as const, error: 'FORBIDDEN' };
+
+    const { credential, alreadyEmitted } = await issueCredentialFromRequest(requestId, sess.user.id);
     // Notify in background (não bloqueia)
     if (!alreadyEmitted) {
       notifyRecipient(credential.id).catch((e) => console.error('notify failed:', e));
@@ -125,9 +149,25 @@ export async function approveRequestAction(requestId: string) {
 }
 
 export async function rejectRequestAction(requestId: string, formData: FormData) {
+  let sess;
+  try {
+    sess = await requireRole('aprovador');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: e.code };
+    throw e;
+  }
   const reason = (formData.get('reason') as string | null) ?? 'Sem motivo informado';
   try {
-    await rejectRequestFn(requestId, reason, null);
+    const db = getDb();
+    const [reqRow] = await db
+      .select({ workspaceId: certificateRequests.workspaceId })
+      .from(certificateRequests)
+      .where(eq(certificateRequests.id, requestId))
+      .limit(1);
+    if (!reqRow) return { ok: false as const, error: 'request_not_found' };
+    if (reqRow.workspaceId !== sess.workspace.id) return { ok: false as const, error: 'FORBIDDEN' };
+
+    await rejectRequestFn(requestId, reason, sess.user.id);
     revalidatePath('/queue');
     return { ok: true as const };
   } catch (e) {
@@ -136,13 +176,37 @@ export async function rejectRequestAction(requestId: string, formData: FormData)
 }
 
 export async function bulkApproveAction(requestIds: string[]) {
+  let sess;
+  try {
+    sess = await requireRole('aprovador');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false as const, error: e.code, approved: 0, failed: 0, errors: [] };
+    throw e;
+  }
+
+  const db = getDb();
   let approved = 0;
   let failed = 0;
   const errors: string[] = [];
 
   for (const id of requestIds) {
     try {
-      const { credential } = await issueCredentialFromRequest(id, null);
+      const [reqRow] = await db
+        .select({ workspaceId: certificateRequests.workspaceId })
+        .from(certificateRequests)
+        .where(eq(certificateRequests.id, id))
+        .limit(1);
+      if (!reqRow) {
+        failed++;
+        errors.push(`${id}: request_not_found`);
+        continue;
+      }
+      if (reqRow.workspaceId !== sess.workspace.id) {
+        failed++;
+        errors.push(`${id}: forbidden`);
+        continue;
+      }
+      const { credential } = await issueCredentialFromRequest(id, sess.user.id);
       notifyRecipient(credential.id).catch(() => {});
       approved++;
     } catch (e) {
