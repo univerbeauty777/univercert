@@ -43,3 +43,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy .vercel/output/static --project-name=univercert --branch=${{ github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Pages runtime secrets (production)
+        if: github.ref_name == 'main'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "${{ secrets.BETTER_AUTH_SECRET }}" | npx wrangler@4 pages secret put BETTER_AUTH_SECRET --project-name=univercert
+          echo "${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}" | npx wrangler@4 pages secret put GOOGLE_OAUTH_CLIENT_ID --project-name=univercert
+          echo "${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}" | npx wrangler@4 pages secret put GOOGLE_OAUTH_CLIENT_SECRET --project-name=univercert
+          if [ -n "${{ secrets.RESEND_API_KEY }}" ]; then
+            echo "${{ secrets.RESEND_API_KEY }}" | npx wrangler@4 pages secret put RESEND_API_KEY --project-name=univercert
+          fi
