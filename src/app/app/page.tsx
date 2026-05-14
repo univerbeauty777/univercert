@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next';
 import Logo from '@/components/Logo';
+import TopNav from '@/components/TopNav';
 
 export const runtime = 'edge';
 
@@ -19,13 +20,7 @@ export default function AppLandingPage() {
     <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0A0E1A 0%, #1B2D5E 50%, #06B6D4 100%)', color: '#fff', overflow: 'hidden', position: 'relative' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 20% 20%, rgba(212,169,55,0.15), transparent 40%), radial-gradient(circle at 80% 80%, rgba(139,92,246,0.15), transparent 40%)' }} />
 
-      <nav style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2 }}>
-        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
-          <Logo size={32} />
-          <span style={{ fontWeight: 800, fontSize: 16 }}>univer<span style={{ color: '#D4A937' }}>CERT</span></span>
-        </a>
-        <a href="/" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 13 }}>← Voltar</a>
-      </nav>
+      <TopNav variant="dark" current="app" />
 
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 24px 80px', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)', gap: 60, alignItems: 'center' }}>

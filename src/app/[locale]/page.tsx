@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { t, type Locale, ALL_LOCALES } from '@/lib/i18n';
 import { FEATURES, COMPARISON, getCategoryLabel, pickML } from '@/lib/landing-data';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import TopNav from '@/components/TopNav';
 
 export const runtime = 'edge';
 export const revalidate = 3600; // 1h ISR
@@ -40,22 +40,8 @@ export default async function LandingPage({ params }: Params) {
 
   return (
     <main style={{ minHeight: '100vh', background: '#fff', color: '#0f172a', fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}>
-      {/* NAV */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <a href={`/${loc}`} style={{ fontWeight: 800, fontSize: 18, textDecoration: 'none', color: '#0f172a' }}>
-            <span style={{ color: '#1B2D5E' }}>univer</span><span style={{ color: '#D4A937' }}>CERT</span>
-          </a>
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center', fontSize: 14 }}>
-            <a href="#features" style={{ color: '#475569', textDecoration: 'none' }}>{t(loc, 'nav.features')}</a>
-            <a href="#compare" style={{ color: '#475569', textDecoration: 'none' }}>{t(loc, 'nav.compare')}</a>
-            <a href="#pricing" style={{ color: '#475569', textDecoration: 'none' }}>{t(loc, 'nav.pricing')}</a>
-            <LanguageSwitcher current={loc} compact />
-            <a href="/sign-in" style={{ color: '#1B2D5E', textDecoration: 'none', fontWeight: 600 }}>{t(loc, 'nav.signin')}</a>
-            <a href="/sign-up" style={{ background: '#1B2D5E', color: '#fff', padding: '8px 18px', borderRadius: 10, textDecoration: 'none', fontWeight: 600 }}>{t(loc, 'nav.signup')}</a>
-          </div>
-        </div>
-      </nav>
+      <TopNav locale={loc} current="landing" />
+
 
       {/* HERO */}
       <section style={{ position: 'relative', overflow: 'hidden', padding: '80px 24px 60px' }}>
