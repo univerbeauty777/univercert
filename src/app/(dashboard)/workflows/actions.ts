@@ -4,9 +4,10 @@
 
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workflows, workspaces, auditLogs } from '@/db/schema';
+import { workflows, auditLogs } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { validateTemplate } from '@/lib/workflow-template';
+import { requireRole, RbacError } from '@/lib/rbac';
 
 type Args = {
   id: string;
@@ -37,19 +38,23 @@ export async function saveWorkflowAction(
   if (!v2.ok) return { ok: false, error: `Body usa variável inválida: ${v2.unknownVars.join(', ')}` };
   if (!v3.ok) return { ok: false, error: `Subject B usa variável inválida: ${v3.unknownVars.join(', ')}` };
 
-  const db = getDb();
-  const slug = 'univerhair';
+  let sess;
   try {
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
-    if (!ws) return { ok: false, error: 'Workspace não encontrado' };
+    sess = await requireRole('admin');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false, error: e.code };
+    throw e;
+  }
+  const workspaceId = sess.workspace.id;
+  const db = getDb();
+  try {
     const now = Math.floor(Date.now() / 1000);
 
     const id = a.id || ID.template().replace('tpl_', 'wfl_');
 
     if (a.id) {
-      // Update
       const [existing] = await db.select().from(workflows).where(eq(workflows.id, a.id)).limit(1);
-      if (!existing || existing.workspaceId !== ws.id) return { ok: false, error: 'Workflow não encontrado' };
+      if (!existing || existing.workspaceId !== workspaceId) return { ok: false, error: 'Workflow não encontrado' };
       await db
         .update(workflows)
         .set({
@@ -67,7 +72,7 @@ export async function saveWorkflowAction(
     } else {
       await db.insert(workflows).values({
         id,
-        workspaceId: ws.id,
+        workspaceId,
         name: a.name.trim(),
         channel: a.channel,
         triggerEvent: a.triggerEvent,
@@ -79,11 +84,11 @@ export async function saveWorkflowAction(
       });
     }
 
-    // Audit
     try {
       await db.insert(auditLogs).values({
         id: ID.auditLog(),
-        workspaceId: ws.id,
+        workspaceId,
+        userId: sess.user.id,
         action: a.id ? 'workflow.update' : 'workflow.create',
         entityType: 'workflow',
         entityId: id,
@@ -100,17 +105,24 @@ export async function saveWorkflowAction(
 
 export async function deleteWorkflowAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!id) return { ok: false, error: 'ID obrigatório' };
+  let sess;
+  try {
+    sess = await requireRole('admin');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false, error: e.code };
+    throw e;
+  }
+  const workspaceId = sess.workspace.id;
   const db = getDb();
   try {
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, 'univerhair')).limit(1);
-    if (!ws) return { ok: false, error: 'Workspace não encontrado' };
     const [existing] = await db.select().from(workflows).where(eq(workflows.id, id)).limit(1);
-    if (!existing || existing.workspaceId !== ws.id) return { ok: false, error: 'Workflow não encontrado' };
+    if (!existing || existing.workspaceId !== workspaceId) return { ok: false, error: 'Workflow não encontrado' };
     await db.delete(workflows).where(eq(workflows.id, id));
     try {
       await db.insert(auditLogs).values({
         id: ID.auditLog(),
-        workspaceId: ws.id,
+        workspaceId,
+        userId: sess.user.id,
         action: 'workflow.delete',
         entityType: 'workflow',
         entityId: id,

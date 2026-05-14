@@ -5,10 +5,11 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workspaces, recipients, certificateRequests, credentials } from '@/db/schema';
+import { recipients, certificateRequests, credentials } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { isValidCPF, cleanCPF } from '@/lib/cpf';
 import { computeCertHash } from '@/lib/credentials';
+import { requireRole, RbacError } from '@/lib/rbac';
 
 export type BulkRow = {
   nome: string;
@@ -28,19 +29,22 @@ export type BulkResult = {
 };
 
 export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
-  const db = getDb();
-  const workspaceId = 'ws_univerhair';
-  const now = Math.floor(Date.now() / 1000);
-
   const result: BulkResult = { ok: true, emitted: 0, failed: 0, errors: [], credentialIds: [] };
 
-  // Resolve workspace
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-  if (!ws) {
-    result.ok = false;
-    result.errors.push({ row: -1, error: 'workspace_not_found' });
-    return result;
+  let sess;
+  try {
+    sess = await requireRole('editor');
+  } catch (e) {
+    if (e instanceof RbacError) {
+      result.ok = false;
+      result.errors.push({ row: -1, error: e.code });
+      return result;
+    }
+    throw e;
   }
+  const workspaceId = sess.workspace.id;
+  const db = getDb();
+  const now = Math.floor(Date.now() / 1000);
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -53,7 +57,6 @@ export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
         throw new Error('cpf_invalido');
       }
 
-      // Upsert recipient
       const existing = await db
         .select()
         .from(recipients)
@@ -61,14 +64,14 @@ export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
         .limit(1);
 
       let recipientId: string;
-      if (existing[0] && existing[0].workspaceId === ws.id) {
+      if (existing[0] && existing[0].workspaceId === workspaceId) {
         recipientId = existing[0].id;
       } else {
         const [created] = await db
           .insert(recipients)
           .values({
             id: ID.recipient(),
-            workspaceId: ws.id,
+            workspaceId,
             cpf,
             name: row.nome,
             email: row.email,
@@ -78,11 +81,10 @@ export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
         recipientId = created.id;
       }
 
-      // Cria request approved
       const reqId = ID.request();
       await db.insert(certificateRequests).values({
         id: reqId,
-        workspaceId: ws.id,
+        workspaceId,
         recipientId,
         source: 'csv',
         courseName: row.curso,
@@ -91,10 +93,9 @@ export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
         reviewedAt: now,
       });
 
-      // Cria credential
       const credId = ID.credential();
       const hash = await computeCertHash({
-        workspaceId: ws.id,
+        workspaceId,
         recipientId,
         recipientName: row.nome,
         cpf,
@@ -105,7 +106,7 @@ export async function bulkEmitAction(rows: BulkRow[]): Promise<BulkResult> {
 
       await db.insert(credentials).values({
         id: credId,
-        workspaceId: ws.id,
+        workspaceId,
         requestId: reqId,
         recipientId,
         hashSha256: hash,

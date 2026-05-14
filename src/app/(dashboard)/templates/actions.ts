@@ -4,8 +4,9 @@
 
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { brandKits, workspaces, auditLogs } from '@/db/schema';
+import { brandKits, auditLogs } from '@/db/schema';
 import { ID } from '@/lib/ulid';
+import { requireRole, RbacError } from '@/lib/rbac';
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 const VALID_VARIANTS = ['classic', 'modern', 'gold', 'minimal', 'executive', 'creative'];
@@ -19,7 +20,6 @@ type SaveArgs = {
 export async function saveBrandKitAction(
   args: SaveArgs,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // Validação defensiva (anti-XSS via cor)
   if (!HEX_RE.test(args.primaryColor) || !HEX_RE.test(args.secondaryColor)) {
     return { ok: false, error: 'Cores devem ser hex válido (#RRGGBB)' };
   }
@@ -27,25 +27,24 @@ export async function saveBrandKitAction(
     return { ok: false, error: 'Template inválido' };
   }
 
+  let sess;
+  try {
+    sess = await requireRole('admin');
+  } catch (e) {
+    if (e instanceof RbacError) return { ok: false, error: e.code };
+    throw e;
+  }
+  const workspaceId = sess.workspace.id;
   const db = getDb();
-  const workspaceSlug = 'univerhair';
 
   try {
-    const [ws] = await db
-      .select()
-      .from(workspaces)
-      .where(eq(workspaces.slug, workspaceSlug))
-      .limit(1);
-    if (!ws) return { ok: false, error: 'Workspace não encontrado' };
-
     const [existing] = await db
       .select()
       .from(brandKits)
-      .where(eq(brandKits.workspaceId, ws.id))
+      .where(eq(brandKits.workspaceId, workspaceId))
       .limit(1);
 
     const now = Math.floor(Date.now() / 1000);
-    const metadata = JSON.stringify({ activeTemplate: args.activeTemplate ?? 'classic' });
 
     if (existing) {
       await db
@@ -55,25 +54,25 @@ export async function saveBrandKitAction(
           secondaryColor: args.secondaryColor,
           updatedAt: now,
         })
-        .where(eq(brandKits.workspaceId, ws.id));
+        .where(eq(brandKits.workspaceId, workspaceId));
     } else {
       await db.insert(brandKits).values({
         id: ID.brandKit(),
-        workspaceId: ws.id,
+        workspaceId,
         primaryColor: args.primaryColor,
         secondaryColor: args.secondaryColor,
         updatedAt: now,
       });
     }
 
-    // Audit log
     try {
       await db.insert(auditLogs).values({
         id: ID.auditLog(),
-        workspaceId: ws.id,
+        workspaceId,
+        userId: sess.user.id,
         action: 'brand_kit.update',
         entityType: 'brand_kit',
-        entityId: ws.id,
+        entityId: workspaceId,
         metadataJson: JSON.stringify({
           primaryColor: args.primaryColor,
           secondaryColor: args.secondaryColor,
