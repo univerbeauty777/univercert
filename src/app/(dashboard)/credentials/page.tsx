@@ -1,18 +1,22 @@
 // UniverCert · Credentials list · Sprint 11 GODMODE
 
 import { eq, desc } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { credentials, recipients } from '@/db/schema';
 import PageHeader from '@/components/PageHeader';
 import StatsBar from '@/components/StatsBar';
 import EmptyState from '@/components/EmptyState';
+import { getCurrentSession } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function CredentialsPage() {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
   const db = getDb();
-  const workspaceId = 'ws_univerhair';
+  const workspaceId = sess.workspace.id;
   const now = Math.floor(Date.now() / 1000);
 
   const list = await db

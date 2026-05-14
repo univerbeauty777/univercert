@@ -1,6 +1,7 @@
 // UniverCert · Visão geral GODMODE 2.0
 
 import { eq, count, and, sql, desc } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import {
   credentials,
@@ -11,16 +12,17 @@ import {
   templates,
   workspaceMembers,
 } from '@/db/schema';
+import { getCurrentSession } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-async function loadData() {
+async function loadData(workspaceId: string) {
   const db = getDb();
   const [ws] = await db
     .select()
     .from(workspaces)
-    .where(eq(workspaces.slug, 'univerhair'))
+    .where(eq(workspaces.id, workspaceId))
     .limit(1);
   if (!ws) return null;
   const wid = ws.id;
@@ -66,7 +68,9 @@ async function loadData() {
 }
 
 export default async function DashboardPage() {
-  const data = await loadData();
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+  const data = await loadData(sess.workspace.id);
 
   if (!data) {
     return (

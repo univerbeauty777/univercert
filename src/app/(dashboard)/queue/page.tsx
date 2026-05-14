@@ -1,9 +1,11 @@
 // UniverCert · fila de aprovação avançada (Sprint 8)
 
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { certificateRequests, recipients } from '@/db/schema';
 import QueueClient from './QueueClient';
+import { getCurrentSession } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -13,13 +15,16 @@ type Params = {
 };
 
 export default async function QueuePage({ searchParams }: Params) {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+
   const sp = await searchParams;
   const status = (sp.status as 'pending' | 'approved' | 'rejected' | 'emitted' | 'all') ?? 'pending';
   const search = sp.q ?? '';
   const sourceFilter = sp.source ?? 'all';
 
   const db = getDb();
-  const workspaceId = 'ws_univerhair';
+  const workspaceId = sess.workspace.id;
 
   const conditions = [eq(certificateRequests.workspaceId, workspaceId)];
   if (status !== 'all') conditions.push(eq(certificateRequests.status, status));

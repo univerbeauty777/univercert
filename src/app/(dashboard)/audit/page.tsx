@@ -1,10 +1,12 @@
 // UniverCert · Audit log · Sprint 11 GODMODE
 
 import { eq, desc } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { auditLogs, users } from '@/db/schema';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
+import { getCurrentSession } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,8 +20,10 @@ const ACTION_BADGE: Record<string, string> = {
 };
 
 export default async function AuditPage() {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
   const db = getDb();
-  const workspaceId = 'ws_univerhair';
+  const workspaceId = sess.workspace.id;
 
   const list = await db
     .select({ log: auditLogs, user: users })
