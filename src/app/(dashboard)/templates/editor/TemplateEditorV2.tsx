@@ -173,7 +173,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
   const addField = (type: FieldType) => {
     const tmpl = FIELD_TEMPLATES.find((t) => t.type === type)!;
     const newField: LayoutField = {
-      id: `f-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+      id: `f-${crypto.randomUUID()}`,
       type,
       x: 30, y: 40, w: 40, h: type === 'qr' ? 16 : 8,
       style: tmpl.defaultStyle,
@@ -203,7 +203,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       if (!orig) return l;
       const dup: LayoutField = {
         ...orig,
-        id: `f-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+        id: `f-${crypto.randomUUID()}`,
         x: Math.min(95, orig.x + 3),
         y: Math.min(95, orig.y + 3),
         locked: false,

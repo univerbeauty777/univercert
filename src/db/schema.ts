@@ -297,6 +297,34 @@ export const billingMeter = sqliteTable(
   }),
 );
 
+// 14b. PAYMENTS (Mercado Pago / pagarme)
+// Mirrors drizzle/migrations/0003_payments.sql
+export const payments = sqliteTable(
+  'payments',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull().default('mercadopago'),
+    externalId: text('external_id'),
+    preferenceId: text('preference_id'),
+    plan: text('plan').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: text('currency').notNull().default('BRL'),
+    status: text('status').notNull().default('pending'),
+    paymentMethod: text('payment_method'),
+    installments: integer('installments'),
+    paidAt: integer('paid_at'),
+    expiresAt: integer('expires_at'),
+    rawPayloadJson: text('raw_payload_json'),
+    createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  },
+  (t) => ({
+    workspaceStatusIdx: index('idx_payments_workspace_status').on(t.workspaceId, t.status),
+    externalUnique: uniqueIndex('idx_payments_external').on(t.provider, t.externalId),
+  }),
+);
+
 // 15. SESSIONS (Better Auth)
 export const sessions = sqliteTable(
   'sessions',
@@ -885,3 +913,4 @@ export type Credential = typeof credentials.$inferSelect;
 export type Integration = typeof integrations.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Verification = typeof verifications.$inferSelect;
+export type Payment = typeof payments.$inferSelect;

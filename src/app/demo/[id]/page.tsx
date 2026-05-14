@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces } from '@/db/schema';
 import DemoConfetti from './DemoConfetti';
+import EmittedAgo from './EmittedAgo';
 import Logo from '@/components/Logo';
 
 export const runtime = 'edge';
@@ -60,7 +61,7 @@ export default async function DemoResultPage({ params }: Params) {
         <div className="text-center mb-10 animate-slide-up">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-success-soft border border-success/30 rounded-full text-[10px] font-bold text-success uppercase tracking-widest mb-5 shadow-card">
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            Emitido em {Math.max(0, Math.floor((Date.now() / 1000) - credential.issuedAt))}s
+            <EmittedAgo issuedAt={credential.issuedAt} />
           </div>
           <h1 className="font-display text-5xl md:text-7xl font-semibold tracking-tight leading-[1.0] mb-4 text-balance">
             Pronto, <span className="text-gradient">{firstName(recipient?.name)}</span>!
