@@ -1,9 +1,11 @@
 // UniverCert · Templates · galeria + editor de personalização (Sprint 12+14)
 
 import { eq } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { brandKits, workspaces, templates } from '@/db/schema';
 import { CERT_VARIANTS } from '@/lib/cert-template';
+import { getCurrentSession } from '@/lib/rbac';
 import PageHeader from '@/components/PageHeader';
 import TemplatesGalleryClient from './TemplatesGalleryClient';
 
@@ -11,14 +13,15 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function TemplatesPage() {
-  const db = getDb();
-  const workspaceSlug = 'univerhair';
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
 
+  const db = getDb();
   const [ws] = await db
     .select({ workspace: workspaces, brand: brandKits })
     .from(workspaces)
     .leftJoin(brandKits, eq(brandKits.workspaceId, workspaces.id))
-    .where(eq(workspaces.slug, workspaceSlug))
+    .where(eq(workspaces.id, sess.workspace.id))
     .limit(1);
 
   // Templates customizados do workspace
