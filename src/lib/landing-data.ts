@@ -4,7 +4,7 @@ import type { Locale } from '@/lib/i18n';
 
 type ML = Partial<Record<Locale, string>> & { pt: string };
 
-export type Feature = { icon: string; title: ML; desc: ML; cat: string };
+export type Feature = { icon: string; title: ML; desc: ML; cat: string; highlight?: boolean };
 
 // 50+ features divididas em 8 categorias
 export const FEATURES: Feature[] = [
@@ -34,6 +34,7 @@ export const FEATURES: Feature[] = [
   { cat: 'delivery', icon: '📨', title: { pt: 'Workflows de email/WA', en: 'Email/WA workflows', es: 'Workflows email/WA', fr: 'Workflows email/WA' }, desc: { pt: 'Triggers: cert.issued, request.submitted, needs_revision. Customizável.', en: 'Triggers: cert.issued, request.submitted, needs_revision. Customizable.', es: 'Triggers personalizables: cert.issued, etc.', fr: 'Triggers personnalisables: cert.issued, etc.' } },
 
   // INTEGRATIONS
+  { cat: 'integrations', icon: '⚡', title: { pt: '2 modos: automático ou aprovação', en: '2 modes: auto or approval-gated', es: '2 modos: automático o por aprobación', fr: '2 modes : auto ou validation' }, desc: { pt: 'Auto-emite via webhook (Hotmart/Kiwify/Memberkit/Fluent) ao concluir, ou exige prova de conhecimento — foto, redação, quiz, documento — antes do aprovador liberar.', en: 'Auto-issue on course completion (Hotmart, Kiwify, Memberkit, Fluent, Zapier), or require proof of knowledge — photo, essay, quiz, document — before reviewer approves.', es: 'Emite solo al completar (Hotmart, Kiwify, Memberkit, Fluent), o exige prueba de conocimiento — foto, redacción, quiz, documento — antes de aprobar.', fr: 'Émission auto à la fin du cours (Hotmart, Kiwify, Memberkit, Fluent), ou preuve de connaissance requise — photo, dissertation, quiz, document — avant validation.' }, highlight: true },
   { cat: 'integrations', icon: '🔌', title: { pt: 'Hotmart/Memberkit/Kiwify/Eduzz', en: 'Hotmart/Memberkit/Kiwify/Eduzz', es: 'Hotmart/Memberkit/Kiwify/Eduzz', fr: 'Hotmart/Memberkit/Kiwify/Eduzz' }, desc: { pt: 'Webhooks nativos com HMAC. Cert emite automaticamente quando aluno compra.', en: 'Native webhooks with HMAC. Cert auto-issues when student buys.', es: 'Webhooks nativos. Cert auto-emite tras compra.', fr: 'Webhooks natifs. Cert auto-émis après achat.' } },
   { cat: 'integrations', icon: '🎓', title: { pt: 'FluentCommunity (WordPress)', en: 'FluentCommunity (WordPress)', es: 'FluentCommunity (WordPress)', fr: 'FluentCommunity (WordPress)' }, desc: { pt: 'Plugin oficial UniverCert × FluentCommunity. Auto-emit ao completar curso.', en: 'Official plugin. Auto-emit on course completion.', es: 'Plugin oficial. Auto-emit al completar.', fr: 'Plugin officiel. Auto-émission à la fin.' } },
   { cat: 'integrations', icon: '⚡', title: { pt: 'N8N nodes oficial', en: 'Official N8N nodes', es: 'N8N nodes oficial', fr: 'N8N nodes officiel' }, desc: { pt: 'Pacote npm n8n-nodes-univercert. 4 actions: emit, get, list, revoke.', en: 'npm package n8n-nodes-univercert. 4 actions.', es: 'Paquete n8n-nodes-univercert. 4 actions.', fr: 'Package n8n-nodes-univercert. 4 actions.' } },

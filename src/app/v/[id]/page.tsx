@@ -72,7 +72,8 @@ export default async function VerifyPage({ params }: Params) {
     });
   }
 
-  const views = await getViewCount(credential.id);
+  // S78b: contagem de verificações ocultada da UI (Diego prefere foco em credibilidade).
+  // logView() continua rodando pra analytics interno (verify_logs).
 
   const status = isRevoked
     ? { label: 'Revogado', icon: '✗', cls: 'bg-gradient-to-r from-danger to-rose-600' }
@@ -186,7 +187,7 @@ export default async function VerifyPage({ params }: Params) {
 
         <div className="mt-7 grid grid-cols-2 md:grid-cols-4 gap-2 animate-fade-in stagger-2">
           <TrustItem icon="🔐" label="HMAC SHA-256" sub="Hash imutável" />
-          <TrustItem icon="🌎" label="URL pública" sub={`${views.toLocaleString('pt-BR')} ${views === 1 ? 'verificação' : 'verificações'}`} />
+          <TrustItem icon="🌎" label="URL pública" sub="Verificável 24/7" />
           <TrustItem icon="📜" label="Open Badges 3.0" sub="IMS Global" />
           <TrustItem icon="⚡" label="Cloudflare" sub="Edge global" />
         </div>

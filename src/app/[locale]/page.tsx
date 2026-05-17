@@ -100,7 +100,14 @@ export default async function LandingPage({ params }: Params) {
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
                   {items.map((f, i) => (
-                    <div key={i} style={{ padding: 18, borderRadius: 14, border: '1px solid rgba(0,0,0,0.06)', background: '#fff', transition: 'all 0.2s' }}>
+                    <div key={i} style={{
+                      padding: 18,
+                      borderRadius: 14,
+                      border: f.highlight ? '1.5px solid #D4A937' : '1px solid rgba(0,0,0,0.06)',
+                      background: f.highlight ? 'linear-gradient(135deg, #fff, #fffbeb)' : '#fff',
+                      boxShadow: f.highlight ? '0 4px 16px rgba(212,169,55,0.18)' : 'none',
+                      transition: 'all 0.2s',
+                    }}>
                       <div style={{ fontSize: 26, marginBottom: 8 }}>{f.icon}</div>
                       <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>{pickML(f.title, loc)}</h4>
                       <p style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.5, margin: 0 }}>{pickML(f.desc, loc)}</p>
