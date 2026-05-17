@@ -1,10 +1,62 @@
 // UniverCert · helpers para emissão de credentials
 // Sprint 1: aprovação cria credential real com hash SHA-256 + ULID
+// S78c (17/Mai/2026): auto-render do PDF/PNG pra R2 logo após criar credential.
+// Resolve "cert sem PDF" + corta custo de Browser Rendering futuro (1 render por cert).
 
 import { eq } from 'drizzle-orm';
+import { getRequestContext } from '@cloudflare/next-on-pages';
 import { getDb } from '@/db/client';
-import { certificateRequests, credentials, recipients } from '@/db/schema';
+import { certificateRequests, credentials, recipients, workspaces, brandKits } from '@/db/schema';
 import { ID } from './ulid';
+
+/**
+ * Renderiza HTML do cert → PDF (Browser Rendering) → salva no R2 → atualiza pdfR2Key.
+ * Idempotente: se cert já tem pdfR2Key, não re-renderiza.
+ * Best-effort: erros são logados mas NÃO bloqueiam (cert continua válido sem PDF).
+ */
+export async function renderAndPersistCertificate(credentialId: string): Promise<{ ok: boolean; pdfKey?: string; error?: string }> {
+  const db = getDb();
+  try {
+    const [row] = await db
+      .select({ c: credentials, r: recipients, w: workspaces, b: brandKits })
+      .from(credentials)
+      .leftJoin(recipients, eq(recipients.id, credentials.recipientId))
+      .leftJoin(workspaces, eq(workspaces.id, credentials.workspaceId))
+      .leftJoin(brandKits, eq(brandKits.workspaceId, credentials.workspaceId))
+      .where(eq(credentials.id, credentialId))
+      .limit(1);
+    if (!row || !row.c) return { ok: false, error: 'CREDENTIAL_NOT_FOUND' };
+    if (row.c.pdfR2Key) return { ok: true, pdfKey: row.c.pdfR2Key };
+
+    const { renderCertificateHtml } = await import('./cert-template');
+    const { renderPdfFromHtml } = await import('./render-pdf');
+
+    const html = renderCertificateHtml({
+      recipientName: row.r?.name || 'Aluno',
+      cpf: row.r?.cpf || null,
+      courseName: row.c.courseName,
+      courseHours: row.c.courseHours ?? null,
+      issuedAt: row.c.issuedAt,
+      verifyUrl: `https://univercert.net/v/${row.c.id}`,
+      workspaceName: row.w?.name || 'UniverCert',
+      primary: row.b?.primaryColor || '#1B2D5E',
+      accent: row.b?.secondaryColor || '#D4A937',
+      variant: 'classic',
+    } as any);
+
+    const pdfBytes = await renderPdfFromHtml(html);
+    const pdfKey = `workspaces/${row.c.workspaceId}/credentials/${row.c.id}.pdf`;
+    const { env } = getRequestContext();
+    const bucket = (env as any).R2_ASSETS as R2Bucket;
+    await bucket.put(pdfKey, pdfBytes, { httpMetadata: { contentType: 'application/pdf' } });
+
+    await db.update(credentials).set({ pdfR2Key: pdfKey }).where(eq(credentials.id, credentialId));
+    return { ok: true, pdfKey };
+  } catch (e) {
+    console.error('[renderAndPersistCertificate] falhou:', (e as Error)?.message);
+    return { ok: false, error: (e as Error)?.message || 'unknown' };
+  }
+}
 
 /**
  * Calcula hash SHA-256 do conteúdo do certificado (canônico).
@@ -97,6 +149,11 @@ export async function issueCredentialFromRequest(requestId: string, reviewerId: 
       reviewedAt: issuedAt,
     })
     .where(eq(certificateRequests.id, req.id));
+
+  // S78c: auto-render do PDF logo após criar (best-effort, não bloqueia)
+  void renderAndPersistCertificate(created.id).catch((e) =>
+    console.error('[issueCredentialFromRequest] auto-render failed:', e?.message)
+  );
 
   return { credential: created, alreadyEmitted: false as const };
 }
