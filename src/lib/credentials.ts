@@ -37,12 +37,14 @@ export async function renderAndPersistCertificate(credentialId: string): Promise
       courseName: row.c.courseName,
       courseHours: row.c.courseHours ?? null,
       issuedAt: row.c.issuedAt,
+      credentialId: row.c.id,
+      hashSha256: row.c.hashSha256,
       verifyUrl: `https://univercert.net/v/${row.c.id}`,
       workspaceName: row.w?.name || 'UniverCert',
-      primary: row.b?.primaryColor || '#1B2D5E',
-      accent: row.b?.secondaryColor || '#D4A937',
+      primaryColor: row.b?.primaryColor || '#1B2D5E',
+      accentColor: row.b?.secondaryColor || '#D4A937',
       variant: 'classic',
-    } as any);
+    });
 
     const pdfBytes = await renderPdfFromHtml(html);
     const pdfKey = `workspaces/${row.c.workspaceId}/credentials/${row.c.id}.pdf`;
