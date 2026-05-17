@@ -9,4 +9,12 @@ export const authClient = createAuthClient({
       : 'https://univercert.net',
 });
 
-export const { signIn, signUp, signOut, useSession } = authClient;
+export const {
+  signIn,
+  signUp,
+  signOut,
+  useSession,
+  // S78: recuperacao de senha
+  requestPasswordReset,
+  resetPassword,
+} = authClient;

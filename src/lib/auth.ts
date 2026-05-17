@@ -6,6 +6,13 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '@/db/schema';
+import { sendEmail } from '@/lib/resend';
+
+
+// S78: HTML branded do email de reset
+function resetPasswordEmailHtml(name: string, url: string): string {
+  return `<!DOCTYPE html><html lang="pt-BR"><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;"><tr><td align="center"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.08);"><tr><td style="background:linear-gradient(135deg,#1B2D5E,#0A0E1A);padding:28px 32px;"><span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">univer<span style="color:#D4A937;">CERT</span></span></td></tr><tr><td style="padding:32px;"><h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0f172a;">Redefinir sua senha</h1><p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">Olá ${name}, recebemos um pedido para redefinir a senha da sua conta UniverCert. Clique no botão abaixo para criar uma nova senha:</p><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:12px;background:linear-gradient(135deg,#1B2D5E,#06B6D4);"><a href="${url}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Redefinir senha &rarr;</a></td></tr></table><p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#94a3b8;">Este link expira em 1 hora. Se você não pediu isso, pode ignorar este email com segurança.</p><p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#cbd5e1;word-break:break-all;">Se o botão não funcionar, copie e cole: ${url}</p></td></tr><tr><td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;"><p style="margin:0;font-size:12px;color:#94a3b8;">UniverCert · univercert.net</p></td></tr></table></td></tr></table></body></html>`;
+}
 
 let cachedAuth: ReturnType<typeof betterAuth> | null = null;
 
@@ -65,6 +72,21 @@ export function getAuth() {
       minPasswordLength: 8,
       maxPasswordLength: 128,
       autoSignIn: true,
+      // S78: recuperacao de senha real via Resend
+      resetPasswordTokenExpiresIn: 60 * 60,
+      sendResetPassword: async ({ user, url }: { user: any; url: string }) => {
+        const res = await sendEmail({
+          to: user.email,
+          subject: 'Redefinir sua senha · UniverCert',
+          html: resetPasswordEmailHtml(user.name || user.email.split('@')[0], url),
+          text: `Olá ${user.name || ''}, redefina sua senha (expira em 1h): ${url}`,
+          tags: [{ name: 'category', value: 'password-reset' }],
+        });
+        if (!res.ok) {
+          console.error('[better-auth][sendResetPassword] falhou:', res.error);
+          throw new Error('Falha ao enviar email de recuperacao');
+        }
+      },
     },
     socialProviders: {
       ...(googleClientId && googleClientSecret
