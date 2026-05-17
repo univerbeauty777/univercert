@@ -40,7 +40,7 @@ export async function getCurrentSession(): Promise<CurrentSession | null> {
       .from(workspaceMembers)
       .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
       .where(eq(workspaceMembers.userId, session.user.id))
-      .orderBy(desc(workspaceMembers.createdAt));
+      .orderBy(desc(workspaceMembers.invitedAt));
 
     const [userRow] = await db
       .select()
@@ -95,7 +95,7 @@ export async function listMyWorkspaces(): Promise<Array<{ id: string; slug: stri
       .from(workspaceMembers)
       .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
       .where(eq(workspaceMembers.userId, session.user.id))
-      .orderBy(desc(workspaceMembers.createdAt));
+      .orderBy(desc(workspaceMembers.invitedAt));
     return rows.map((r) => ({ id: r.ws.id, slug: r.ws.slug, name: r.ws.name, role: r.m.role as Role }));
   } catch {
     return [];
