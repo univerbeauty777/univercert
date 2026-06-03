@@ -52,6 +52,8 @@ APP_NAME = "UniverCert"
 APP_URL = "https://univercert.net"
 DEFAULT_LOCALE = "pt-BR"
 SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
+# Remetente dos e-mails (Resend). univercert.net verificado no Resend.
+RESEND_FROM = "UniverCert <noreply@univercert.net>"
 
 # ----------------------------------------
 # Secrets — definir via: wrangler secret put NOME
