@@ -299,7 +299,13 @@ function univercert_fluent_dispatch($payload) {
     $rbody = wp_remote_retrieve_body($resp);
     if ($code >= 200 && $code < 300) {
         univercert_fluent_log(true, 'POST ' . $code . ' ' . substr($rbody, 0, 100));
-        return ['ok' => true, 'message' => 'enviado (HTTP ' . $code . ')', 'status' => $code];
+        $json = json_decode($rbody, true);
+        return [
+            'ok' => true,
+            'message' => 'enviado (HTTP ' . $code . ')',
+            'status' => $code,
+            'credential_id' => is_array($json) ? ($json['credential_id'] ?? null) : null,
+        ];
     }
     univercert_fluent_log(false, 'HTTP ' . $code . ' ' . substr($rbody, 0, 200));
     return ['ok' => false, 'message' => 'HTTP ' . $code . ' — ' . substr($rbody, 0, 200), 'status' => $code];
@@ -376,7 +382,17 @@ function univercert_fluent_handle_course_completed($course, $user) {
         'completed_at' => time(),
     ];
 
-    univercert_fluent_dispatch($payload);
+    $res = univercert_fluent_dispatch($payload);
+
+    // Guarda o cert recém-emitido pro widget in-course (botão flutuante) destacar.
+    if (!empty($res['ok']) && !empty($res['credential_id'])) {
+        update_user_meta($user_id, 'univercert_recent_cert', [
+            'credential_id' => $res['credential_id'],
+            'course'        => $payload['course']['name'] ?? '',
+            'ts'            => time(),
+            'seen'          => 0,
+        ]);
+    }
 }
 
 /* =============================================================================
@@ -439,4 +455,90 @@ add_shortcode('univercert_certificates', function ($atts) {
         '</div>',
         esc_url($src)
     );
+});
+
+/* =============================================================================
+ * 6. WIDGET IN-COURSE — botão flutuante "Meu Certificado"
+ * Funciona dentro do FluentCommunity (SPA Vue) via wp_footer no shell do WP.
+ * Quando o aluno conclui um curso, o botão pulsa + abre sozinho com o cert.
+ * Resolve o "aluno perdido": ele vê o certificado na hora, sem depender do email.
+ * ========================================================================== */
+
+add_action('wp_ajax_univercert_seen_cert', function () {
+    check_ajax_referer('univercert_seen_cert');
+    $u = wp_get_current_user();
+    if ($u && $u->ID) {
+        $m = get_user_meta($u->ID, 'univercert_recent_cert', true);
+        if (is_array($m)) { $m['seen'] = 1; update_user_meta($u->ID, 'univercert_recent_cert', $m); }
+    }
+    wp_send_json_success();
+});
+
+add_action('wp_footer', function () {
+    if (!is_user_logged_in()) return;
+    $s = univercert_fluent_get_settings();
+    if (empty($s['enabled']) || empty($s['workspace_slug'])) return;
+
+    $u = wp_get_current_user();
+    $base = rtrim($s['api_base'], '/');
+    $ws = urlencode($s['workspace_slug']);
+    $embed = esc_url($base . '/embed/student/' . urlencode($u->user_email) . '?ws=' . $ws . '&limit=20');
+
+    $recent = get_user_meta($u->ID, 'univercert_recent_cert', true);
+    $isNew = is_array($recent) && empty($recent['seen']);
+    $newCourse = $isNew ? (string) ($recent['course'] ?? '') : '';
+    $nonce = wp_create_nonce('univercert_seen_cert');
+    ?>
+    <div id="uc-cert-fab" data-new="<?php echo $isNew ? '1' : '0'; ?>">
+      <button id="uc-cert-btn" type="button" aria-label="Meu certificado">
+        <span class="uc-ico">🎓</span><span class="uc-lbl">Meu Certificado</span>
+        <?php if ($isNew) echo '<span class="uc-badge">1</span>'; ?>
+      </button>
+      <div id="uc-cert-panel" role="dialog" aria-label="Meus certificados">
+        <div class="uc-panel-head">
+          <strong>Meus Certificados</strong>
+          <button id="uc-cert-close" type="button" aria-label="Fechar">×</button>
+        </div>
+        <?php if ($isNew && $newCourse): ?>
+        <div class="uc-celebrate">🎉 Parabéns! Seu certificado de <b><?php echo esc_html($newCourse); ?></b> está pronto.</div>
+        <?php endif; ?>
+        <iframe src="<?php echo $embed; ?>" title="Meus certificados" loading="lazy"></iframe>
+      </div>
+    </div>
+    <style>
+      #uc-cert-fab{position:fixed;right:20px;bottom:20px;z-index:99999;font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;}
+      #uc-cert-btn{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1B2D5E,#D4A937);color:#fff;border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(15,23,42,.28);position:relative;}
+      #uc-cert-btn .uc-ico{font-size:18px;line-height:1;}
+      #uc-cert-btn .uc-badge{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid #fff;}
+      #uc-cert-fab[data-new="1"] #uc-cert-btn{animation:uc-pulse 1.6s ease-in-out infinite;}
+      @keyframes uc-pulse{0%,100%{transform:scale(1);box-shadow:0 8px 24px rgba(212,169,55,.35);}50%{transform:scale(1.05);box-shadow:0 10px 30px rgba(212,169,55,.6);}}
+      #uc-cert-panel{display:none;position:fixed;right:20px;bottom:80px;width:min(420px,92vw);height:min(620px,76vh);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.32);overflow:hidden;flex-direction:column;}
+      #uc-cert-fab.open #uc-cert-panel{display:flex;}
+      .uc-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eef0f3;background:#0A0E1A;color:#fff;}
+      #uc-cert-close{background:transparent;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;}
+      .uc-celebrate{padding:12px 16px;background:#ecfdf5;color:#065f46;font-size:13px;border-bottom:1px solid #d1fae5;}
+      #uc-cert-panel iframe{flex:1;width:100%;border:0;}
+      @media(max-width:480px){#uc-cert-btn .uc-lbl{display:none;}}
+    </style>
+    <script>
+    (function(){
+      var fab=document.getElementById('uc-cert-fab');
+      var btn=document.getElementById('uc-cert-btn');
+      var close=document.getElementById('uc-cert-close');
+      if(!fab||!btn)return;
+      var isNew=fab.getAttribute('data-new')==='1';
+      function markSeen(){
+        if(!isNew)return; isNew=false;
+        var b=btn.querySelector('.uc-badge'); if(b)b.remove();
+        fab.setAttribute('data-new','0');
+        try{fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=univercert_seen_cert&_wpnonce=<?php echo $nonce; ?>',credentials:'same-origin'});}catch(e){}
+      }
+      function open(){fab.classList.add('open');markSeen();}
+      function closeP(){fab.classList.remove('open');}
+      btn.addEventListener('click',function(){fab.classList.contains('open')?closeP():open();});
+      close.addEventListener('click',closeP);
+      <?php if ($isNew): ?>setTimeout(open,1200);<?php endif; ?>
+    })();
+    </script>
+    <?php
 });
