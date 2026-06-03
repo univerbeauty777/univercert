@@ -29,6 +29,9 @@ cloudflare-env.d.ts
 .DS_Store
 *.pem
 
+# godmode dev scripts (não commitar)
+*.command
+
 # debug
 npm-debug.log*
 yarn-debug.log*
