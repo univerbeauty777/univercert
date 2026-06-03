@@ -32,10 +32,9 @@ export default async function BulkPage() {
     <main className="min-h-screen bg-gray-50 py-8 px-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-extrabold">Emitir em massa</h1>
+          <h1 className="text-2xl font-extrabold">Emitir certificados</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Cole ou faça upload de um CSV com os alunos. Formato:{' '}
-            <code className="text-xs bg-gray-100 px-2 py-1 rounded">nome,cpf,email,whatsapp,curso,horas</code>
+            Preencha os dados de <strong>um aluno</strong> ou emita <strong>em massa</strong> via CSV. O certificado sai no template escolhido e o aluno recebe por email.
           </p>
         </div>
 

@@ -36,13 +36,51 @@ function parseCsv(text: string): { rows: BulkRow[]; errors: string[] } {
   return { rows, errors };
 }
 
-export default function BulkClient({ templateOptions = [] }: { templateOptions?: Array<{ id: string; name: string }> }) {
+type Props = { templateOptions?: Array<{ id: string; name: string }> };
+
+export default function BulkClient({ templateOptions = [] }: Props) {
+  const [mode, setMode] = useState<'single' | 'csv'>('single');
+  const [templateId, setTemplateId] = useState<string>(templateOptions[0]?.id ?? 'classic');
+  const [result, setResult] = useState<BulkResult | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // --- modo individual ---
+  const [single, setSingle] = useState({ nome: '', cpf: '', email: '', whatsapp: '', curso: '', horas: '' });
+  const [singleErr, setSingleErr] = useState<string | null>(null);
+
+  // --- modo CSV ---
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<BulkRow[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
-  const [result, setResult] = useState<BulkResult | null>(null);
-  const [templateId, setTemplateId] = useState<string>(templateOptions[0]?.id ?? 'classic');
-  const [isPending, startTransition] = useTransition();
+
+  const TemplatePicker = templateOptions.length > 0 ? (
+    <div>
+      <label className="label" htmlFor="tpl">Template do certificado</label>
+      <select id="tpl" className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+        {templateOptions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+    </div>
+  ) : null;
+
+  const handleEmitSingle = () => {
+    setSingleErr(null);
+    if (!single.nome.trim() || !single.email.trim() || !single.curso.trim()) {
+      setSingleErr('Preencha pelo menos Nome, Email e Curso.');
+      return;
+    }
+    const row: BulkRow = {
+      nome: single.nome.trim(),
+      email: single.email.trim(),
+      curso: single.curso.trim(),
+      cpf: single.cpf.trim() || undefined,
+      whatsapp: single.whatsapp.trim() || undefined,
+      horas: single.horas ? Number(single.horas) || undefined : undefined,
+    };
+    startTransition(async () => {
+      const res = await bulkEmitAction([row], { templateId });
+      setResult(res);
+    });
+  };
 
   const handleParse = () => {
     const { rows, errors } = parseCsv(csv);
@@ -51,7 +89,7 @@ export default function BulkClient({ templateOptions = [] }: { templateOptions?:
     setResult(null);
   };
 
-  const handleEmit = () => {
+  const handleEmitCsv = () => {
     if (preview.length === 0) return;
     startTransition(async () => {
       const res = await bulkEmitAction(preview, { templateId });
@@ -62,65 +100,99 @@ export default function BulkClient({ templateOptions = [] }: { templateOptions?:
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    setCsv(text);
+    setCsv(await file.text());
   };
 
   return (
     <div className="space-y-4">
-      <div className="card">
-        <label className="label">Upload CSV (ou cole abaixo)</label>
-        <input type="file" accept=".csv,text/csv" onChange={handleFileUpload} className="mb-3 text-sm" />
-
-        <textarea
-          className="input font-mono text-xs h-40"
-          placeholder={SAMPLE_CSV}
-          value={csv}
-          onChange={(e) => setCsv(e.target.value)}
-        />
-
-        {templateOptions.length > 0 && (
-          <div className="mt-3">
-            <label className="label" htmlFor="bulk-tpl">Template do certificado</label>
-            <select
-              id="bulk-tpl"
-              className="input"
-              value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-            >
-              {templateOptions.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">Aplicado a todos os certificados deste lote.</p>
-          </div>
-        )}
-
-        <div className="flex gap-2 mt-3">
-          <button onClick={handleParse} className="btn-secondary">Pré-visualizar</button>
-          <button
-            onClick={() => setCsv(SAMPLE_CSV)}
-            className="btn-secondary text-xs"
-            type="button"
-          >
-            Usar exemplo
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => { setMode('single'); setResult(null); }}
+          className={mode === 'single' ? 'btn-primary' : 'btn-secondary'}
+        >
+          👤 Um aluno
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode('csv'); setResult(null); }}
+          className={mode === 'csv' ? 'btn-primary' : 'btn-secondary'}
+        >
+          📋 Em massa (CSV)
+        </button>
       </div>
 
-      {parseErrors.length > 0 && (
-        <div className="card border-l-4 border-danger bg-red-50 text-sm text-red-700">
-          {parseErrors.map((e, i) => (
-            <div key={i}>✗ {e}</div>
-          ))}
+      {/* MODO INDIVIDUAL */}
+      {mode === 'single' && (
+        <div className="card space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="label" htmlFor="s-nome">Nome do aluno *</label>
+              <input id="s-nome" className="input" value={single.nome} onChange={(e) => setSingle({ ...single, nome: e.target.value })} placeholder="Maria Silva Souza" />
+            </div>
+            <div>
+              <label className="label" htmlFor="s-email">Email *</label>
+              <input id="s-email" type="email" className="input" value={single.email} onChange={(e) => setSingle({ ...single, email: e.target.value })} placeholder="maria@email.com" />
+            </div>
+            <div>
+              <label className="label" htmlFor="s-curso">Curso *</label>
+              <input id="s-curso" className="input" value={single.curso} onChange={(e) => setSingle({ ...single, curso: e.target.value })} placeholder="Liso Blindado Express" />
+            </div>
+            <div>
+              <label className="label" htmlFor="s-horas">Carga horária</label>
+              <input id="s-horas" type="number" className="input" value={single.horas} onChange={(e) => setSingle({ ...single, horas: e.target.value })} placeholder="32" />
+            </div>
+            <div>
+              <label className="label" htmlFor="s-cpf">CPF</label>
+              <input id="s-cpf" className="input" value={single.cpf} onChange={(e) => setSingle({ ...single, cpf: e.target.value })} placeholder="000.000.000-00" />
+            </div>
+            <div>
+              <label className="label" htmlFor="s-wa">WhatsApp</label>
+              <input id="s-wa" className="input" value={single.whatsapp} onChange={(e) => setSingle({ ...single, whatsapp: e.target.value })} placeholder="5511999999999" />
+            </div>
+          </div>
+
+          {TemplatePicker}
+
+          {singleErr && <div className="text-sm text-red-600">⚠ {singleErr}</div>}
+
+          <button onClick={handleEmitSingle} disabled={isPending} className="btn-primary">
+            {isPending ? 'Emitindo...' : 'Emitir certificado →'}
+          </button>
         </div>
       )}
 
-      {preview.length > 0 && !result && (
+      {/* MODO CSV */}
+      {mode === 'csv' && (
+        <div className="card">
+          <p className="text-sm text-gray-500 mb-3">
+            Formato: <code className="text-xs bg-gray-100 px-2 py-1 rounded">nome,cpf,email,whatsapp,curso,horas</code>
+          </p>
+          <label className="label">Upload CSV (ou cole abaixo)</label>
+          <input type="file" accept=".csv,text/csv" onChange={handleFileUpload} className="mb-3 text-sm" />
+          <textarea className="input font-mono text-xs h-40" placeholder={SAMPLE_CSV} value={csv} onChange={(e) => setCsv(e.target.value)} />
+
+          <div className="mt-3">{TemplatePicker}</div>
+
+          <div className="flex gap-2 mt-3">
+            <button onClick={handleParse} className="btn-secondary">Pré-visualizar</button>
+            <button onClick={() => setCsv(SAMPLE_CSV)} className="btn-secondary text-xs" type="button">Usar exemplo</button>
+          </div>
+        </div>
+      )}
+
+      {parseErrors.length > 0 && (
+        <div className="card border-l-4 border-danger bg-red-50 text-sm text-red-700">
+          {parseErrors.map((e, i) => <div key={i}>✗ {e}</div>)}
+        </div>
+      )}
+
+      {mode === 'csv' && preview.length > 0 && !result && (
         <div className="card p-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
             <span className="font-bold text-sm">{preview.length} alunos encontrados</span>
-            <button onClick={handleEmit} disabled={isPending} className="btn-primary">
+            <button onClick={handleEmitCsv} disabled={isPending} className="btn-primary">
               {isPending ? 'Emitindo...' : `Emitir ${preview.length} certificados →`}
             </button>
           </div>
@@ -145,11 +217,7 @@ export default function BulkClient({ templateOptions = [] }: { templateOptions?:
                 </tr>
               ))}
               {preview.length > 50 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-2 text-center text-gray-500">
-                    +{preview.length - 50} linhas (preview limitado a 50)
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-3 py-2 text-center text-gray-500">+{preview.length - 50} linhas (preview limitado a 50)</td></tr>
               )}
             </tbody>
           </table>
@@ -159,35 +227,26 @@ export default function BulkClient({ templateOptions = [] }: { templateOptions?:
       {result && (
         <div className="card border-l-4 border-success bg-green-50">
           <div className="font-bold text-success text-lg">
-            ✓ {result.emitted} certificados emitidos · {result.failed} falhas
+            ✓ {result.emitted} certificado{result.emitted === 1 ? '' : 's'} emitido{result.emitted === 1 ? '' : 's'} · {result.failed} falhas
           </div>
           {result.errors.length > 0 && (
             <details className="mt-3 text-sm">
-              <summary className="cursor-pointer font-semibold text-danger">
-                Ver {result.errors.length} erros
-              </summary>
+              <summary className="cursor-pointer font-semibold text-danger">Ver {result.errors.length} erros</summary>
               <ul className="mt-2 space-y-1 font-mono text-xs">
-                {result.errors.map((e, i) => (
-                  <li key={i}>linha {e.row + 1}: {e.error}</li>
-                ))}
+                {result.errors.map((e, i) => <li key={i}>linha {e.row + 1}: {e.error}</li>)}
               </ul>
             </details>
           )}
           {result.credentialIds.length > 0 && (
-            <details className="mt-3 text-sm">
-              <summary className="cursor-pointer font-semibold">
-                Ver primeiros 10 IDs de credenciais
-              </summary>
-              <ul className="mt-2 space-y-1 font-mono text-xs">
-                {result.credentialIds.slice(0, 10).map((id) => (
-                  <li key={id}>
-                    <a href={`/v/${id}`} target="_blank" rel="noopener" className="text-primary underline">
-                      {id}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </details>
+            <ul className="mt-3 space-y-1 text-sm">
+              {result.credentialIds.slice(0, 10).map((id) => (
+                <li key={id}>
+                  <a href={`/v/${id}`} target="_blank" rel="noopener" className="text-primary underline">Ver certificado: {id}</a>
+                  {' · '}
+                  <a href={`/api/v1/credentials/${id}/pdf`} target="_blank" rel="noopener" className="text-primary underline">PDF</a>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
