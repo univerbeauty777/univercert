@@ -325,8 +325,27 @@ add_action('fluent_community_course_completed', 'univercert_fluent_handle_course
 add_action('fluent_community_course/completed', 'univercert_fluent_handle_course_completed', 10, 2);
 
 function univercert_fluent_handle_course_completed($course, $user) {
-    // Normaliza diferentes formatos
-    $course_arr = is_object($course) ? (array) $course : (array) $course;
+    // Extrai campo de course/user lidando com Model (objeto, via __get/toArray) OU array.
+    // FluentCommunity passa um Model Eloquent-like como $course e um int como $user.
+    $field = function ($src, $keys, $default = null) {
+        foreach ((array) $keys as $k) {
+            if (is_object($src)) {
+                if (isset($src->$k) && $src->$k !== '' && $src->$k !== null) return $src->$k;
+            } elseif (is_array($src)) {
+                if (isset($src[$k]) && $src[$k] !== '' && $src[$k] !== null) return $src[$k];
+            }
+        }
+        return $default;
+    };
+
+    // Se for Model com toArray(), usa o array de atributos como fallback rico.
+    $course_attrs = (is_object($course) && method_exists($course, 'toArray')) ? $course->toArray() : (is_array($course) ? $course : []);
+    $pick = function ($keys, $default = null) use ($field, $course, $course_attrs) {
+        $v = $field($course, $keys, null);
+        if ($v !== null) return $v;
+        return $field($course_attrs, $keys, $default);
+    };
+
     $user_id = is_object($user) ? ($user->ID ?? $user->id ?? 0) : (is_array($user) ? ($user['ID'] ?? $user['id'] ?? 0) : (int) $user);
 
     if (!$user_id) {
@@ -339,12 +358,14 @@ function univercert_fluent_handle_course_completed($course, $user) {
         return;
     }
 
+    $course_hours = $pick(['hours', 'course_hours'], null);
+
     $payload = [
         'course' => [
-            'id'    => $course_arr['id'] ?? $course_arr['ID'] ?? null,
-            'name'  => $course_arr['title'] ?? $course_arr['name'] ?? '',
-            'slug'  => $course_arr['slug'] ?? null,
-            'hours' => isset($course_arr['hours']) ? (int) $course_arr['hours'] : null,
+            'id'    => $pick(['id', 'ID']),
+            'name'  => $pick(['title', 'name', 'post_title'], ''),
+            'slug'  => $pick(['slug', 'post_name']),
+            'hours' => $course_hours !== null ? (int) $course_hours : null,
         ],
         'student' => [
             'name'  => $wp_user->display_name ?: trim($wp_user->first_name . ' ' . $wp_user->last_name) ?: $wp_user->user_login,
