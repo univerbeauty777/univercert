@@ -7,7 +7,7 @@ import { getDb } from '@/db/client';
 import { workspaces, integrations, recipients, certificateRequests, webhooksIn, credentials } from '@/db/schema';
 import { ID } from './ulid';
 import { computeCertHash } from '@/lib/credentials';
-import { dispatchWorkflowsFor } from '@/lib/email-dispatcher';
+import { notifyRecipient } from '@/lib/notify';
 
 type IntegrationConfig = {
   auto_approve?: boolean;
@@ -167,18 +167,15 @@ export async function processWebhook(
         .returning();
       credentialId = cred.id;
 
-      // Dispara workflows configurados (email engine S18)
+      // Notifica o aluno. notifyRecipient dispara workflows custom se houver,
+      // OU manda um email default (fallback) — assim o cert auto-emitido via
+      // webhook nunca fica sem comunicação, mesmo sem workflow configurado.
       const sendEmailFlag = cfg.send_email !== false;       // default true
       if (sendEmailFlag) {
         try {
-          await dispatchWorkflowsFor({
-            workspaceId: ws.id,
-            triggerEvent: 'credential.issued',
-            credentialId: cred.id,
-            channel: 'email',
-          });
+          await notifyRecipient(cred.id);
         } catch (e) {
-          console.error('[webhook] dispatch failed:', (e as Error).message);
+          console.error('[webhook] notify failed:', (e as Error).message);
         }
       }
     } catch (e) {

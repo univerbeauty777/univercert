@@ -6,7 +6,7 @@ import { getDb } from '@/db/client';
 import { credentials, shareEvents } from '@/db/schema';
 import { ID } from '@/lib/ulid';
 import { hashIp } from '@/lib/share-urls';
-import { getClientIp } from '@/lib/rate-limit';
+import { getClientIp, rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 
@@ -25,11 +25,16 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: `canal invalido. validos: ${[...VALID_CHANNELS].join(', ')}` }, { status: 400 });
     }
 
+    const ip = getClientIp(req);
+
+    // Rate limit por IP — evita inflar contagem de shares (write amplification).
+    const rl = await rateLimit({ key: `share-track:${ip}`, max: 60, windowSec: 60 });
+    if (!rl.ok) return Response.json({ ok: false, error: 'rate_limited' }, { status: 429 });
+
     const db = getDb();
     const [cred] = await db.select().from(credentials).where(eq(credentials.id, body.credentialId)).limit(1);
     if (!cred) return Response.json({ ok: false, error: 'cert nao encontrado' }, { status: 404 });
 
-    const ip = getClientIp(req);
     const ipHash = ip ? await hashIp(ip) : null;
     const ua = req.headers.get('user-agent')?.slice(0, 200) ?? null;
     const referer = req.headers.get('referer')?.slice(0, 200) ?? null;

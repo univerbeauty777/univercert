@@ -34,9 +34,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       .from(shareEvents).where(eq(shareEvents.credentialId, id))
       .orderBy(desc(shareEvents.occurredAt)).limit(50),
 
-    db.select({ ts: verifyLogs.occurredAt, ua: verifyLogs.userAgent })
+    db.select({ ts: verifyLogs.viewedAt, ua: verifyLogs.userAgent })
       .from(verifyLogs).where(eq(verifyLogs.credentialId, id))
-      .orderBy(desc(verifyLogs.occurredAt)).limit(50),
+      .orderBy(desc(verifyLogs.viewedAt)).limit(50),
 
     db.select({ value: count() }).from(shareEvents).where(eq(shareEvents.credentialId, id)),
     db.select({ value: count() }).from(verifyLogs).where(eq(verifyLogs.credentialId, id)),

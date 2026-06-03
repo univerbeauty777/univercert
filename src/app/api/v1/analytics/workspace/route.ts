@@ -25,56 +25,51 @@ export async function GET(req: Request) {
   const sinceTs = Math.floor(Date.now() / 1000) - days * 86400;
   const db = getDb();
 
-  // Em paralelo
-  const [
-    sharesByChannel,
-    sharesTotal,
-    verifyCount,
-    issuedInRange,
-    pendingReqs,
-    topShared,
-  ] = await Promise.all([
-    db.select({
-      channel: shareEvents.channel,
-      total: count(),
-    }).from(shareEvents)
+  // Cada métrica é resiliente: se uma query falhar (ex.: drift de schema em D1),
+  // degrada pra zero em vez de derrubar a página inteira com 500.
+  const q = async <T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e) {
+      console.error(`[analytics/workspace] query '${label}' falhou:`, (e as Error)?.message);
+      return fallback;
+    }
+  };
+
+  const [sharesByChannel, sharesTotal, verifyCount, issuedInRange, pendingReqs, topShared] = await Promise.all([
+    q(() => db.select({ channel: shareEvents.channel, total: count() }).from(shareEvents)
       .where(and(eq(shareEvents.workspaceId, wsId), gte(shareEvents.occurredAt, sinceTs)))
-      .groupBy(shareEvents.channel),
+      .groupBy(shareEvents.channel), [] as { channel: string; total: number }[], 'sharesByChannel'),
 
-    db.select({ value: count() }).from(shareEvents)
-      .where(and(eq(shareEvents.workspaceId, wsId), gte(shareEvents.occurredAt, sinceTs))),
+    q(() => db.select({ value: count() }).from(shareEvents)
+      .where(and(eq(shareEvents.workspaceId, wsId), gte(shareEvents.occurredAt, sinceTs))), [] as { value: number }[], 'sharesTotal'),
 
-    db.select({ value: count() }).from(verifyLogs)
-      .where(and(eq(verifyLogs.workspaceId, wsId), gte(verifyLogs.occurredAt, sinceTs))),
+    // verify_logs não tem workspace_id nem occurred_at — join em credentials e usa viewed_at.
+    q(() => db.select({ value: count() }).from(verifyLogs)
+      .innerJoin(credentials, eq(credentials.id, verifyLogs.credentialId))
+      .where(and(eq(credentials.workspaceId, wsId), gte(verifyLogs.viewedAt, sinceTs))), [] as { value: number }[], 'verifyCount'),
 
-    db.select({ value: count() }).from(credentials)
-      .where(and(eq(credentials.workspaceId, wsId), eq(credentials.status, 'issued'), gte(credentials.issuedAt, sinceTs))),
+    q(() => db.select({ value: count() }).from(credentials)
+      .where(and(eq(credentials.workspaceId, wsId), eq(credentials.status, 'issued'), gte(credentials.issuedAt, sinceTs))), [] as { value: number }[], 'issuedInRange'),
 
-    db.select({ value: count() }).from(certificateRequests)
-      .where(and(eq(certificateRequests.workspaceId, wsId), eq(certificateRequests.status, 'pending'))),
+    q(() => db.select({ value: count() }).from(certificateRequests)
+      .where(and(eq(certificateRequests.workspaceId, wsId), eq(certificateRequests.status, 'pending'))), [] as { value: number }[], 'pendingReqs'),
 
-    db.select({
-      credentialId: shareEvents.credentialId,
-      shares: count(),
-    }).from(shareEvents)
+    q(() => db.select({ credentialId: shareEvents.credentialId, shares: count() }).from(shareEvents)
       .where(and(eq(shareEvents.workspaceId, wsId), gte(shareEvents.occurredAt, sinceTs)))
-      .groupBy(shareEvents.credentialId)
-      .orderBy(desc(count()))
-      .limit(10),
+      .groupBy(shareEvents.credentialId).orderBy(desc(count())).limit(10),
+      [] as { credentialId: string; shares: number }[], 'topShared'),
   ]);
 
   // Busca metadata dos top certs
   const topIds = topShared.map((t) => t.credentialId);
   let topCertsDetails: any[] = [];
   if (topIds.length > 0) {
-    const detailsList = await db.select({
+    const detailsList = await q(() => db.select({
       id: credentials.id, courseName: credentials.courseName, issuedAt: credentials.issuedAt,
-    }).from(credentials).where(eq(credentials.workspaceId, wsId));
+    }).from(credentials).where(eq(credentials.workspaceId, wsId)), [] as any[], 'topCertsDetails');
     const map = new Map(detailsList.map((d) => [d.id, d]));
-    topCertsDetails = topShared.map((t) => ({
-      ...map.get(t.credentialId),
-      shares: t.shares,
-    })).filter((t) => t.id);
+    topCertsDetails = topShared.map((t) => ({ ...map.get(t.credentialId), shares: t.shares })).filter((t) => t.id);
   }
 
   return Response.json({

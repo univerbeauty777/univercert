@@ -157,7 +157,7 @@ function univercert_fluent_render_settings() {
                     <th>Email automático</th>
                     <td>
                         <label>
-                            <input type="checkbox" name="<?php echo UNIVERCERT_FLUENT_OPT; ?>[send_email] " value="1" <?php checked($s['send_email'], 1); ?>>
+                            <input type="checkbox" name="<?php echo UNIVERCERT_FLUENT_OPT; ?>[send_email]" value="1" <?php checked($s['send_email'], 1); ?>>
                             Enviar email com link do certificado pro aluno
                         </label>
                     </td>

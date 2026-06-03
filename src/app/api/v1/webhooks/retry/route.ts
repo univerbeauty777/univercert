@@ -3,6 +3,7 @@
 // Roda via Cloudflare Cron Trigger ou external scheduler.
 
 import { eq, and, lte, lt, isNull, or } from 'drizzle-orm';
+import { getRequestContext } from '@cloudflare/next-on-pages';
 import { getDb } from '@/db/client';
 import { webhookDeliveries, webhookEndpoints } from '@/db/schema';
 import { deliverOnce } from '@/lib/webhook-dispatcher';
@@ -12,12 +13,16 @@ export const runtime = 'edge';
 const MAX_BATCH = 20;
 
 export async function POST(req: Request) {
-  // Auth via shared secret (CRON_SECRET env var) ou Bearer
+  // Auth via shared secret (CRON_SECRET). Fail-closed: sem secret configurado,
+  // recusa (antes, se CRON_SECRET não estivesse setado, qualquer um disparava retries).
   const authHeader = req.headers.get('authorization') ?? '';
-  // @ts-expect-error - env binding
-  const env = (req as any).cf ? (await import('@cloudflare/next-on-pages')).getRequestContext().env : {};
+  let env: any = {};
+  try { env = getRequestContext().env; } catch { /* fora de request context */ }
   const cronSecret = (env as any).CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return Response.json({ ok: false, error: 'cron_not_configured' }, { status: 503 });
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
