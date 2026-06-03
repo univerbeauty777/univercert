@@ -64,5 +64,10 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: result.status });
   }
-  return Response.json({ ok: true, request_id: result.requestId });
+  return Response.json({
+    ok: true,
+    request_id: result.requestId,
+    autoApproved: result.autoApproved ?? false,
+    credential_id: result.credentialId ?? null,
+  });
 }
