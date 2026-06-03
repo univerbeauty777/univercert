@@ -26,10 +26,10 @@ export async function POST(request: Request) {
   const hottok = request.headers.get('x-hotmart-hottok') ?? '';
 
   // Hotmart usa um token estático. Comparamos com o webhookSecret da integration.
+  // OBRIGATÓRIO: sem secret configurado → rejeita (antes aceitava qualquer POST).
   const secret = await getWebhookSecret(wsSlug, 'hotmart');
-  if (secret && hottok !== secret) {
-    return Response.json({ error: 'invalid_hottok' }, { status: 401 });
-  }
+  if (!secret) return Response.json({ error: 'webhook_secret_not_configured' }, { status: 401 });
+  if (hottok !== secret) return Response.json({ error: 'invalid_hottok' }, { status: 401 });
 
   let payload: any;
   try {

@@ -15,10 +15,28 @@ import { renderPdfFromHtml } from '@/lib/render-pdf';
 import { notifyRecipient } from '@/lib/notify';
 import { buildOpenBadge } from '@/lib/openbadge';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { verifyApiKey, hasScopePermission, extractBearer, type ApiKeyScope } from '@/lib/api-key';
 
 export const runtime = 'edge';
 
 const app = new Hono().basePath('/api/v1');
+
+/**
+ * Exige API key válida (Bearer) com o scope mínimo. Retorna o workspaceId da key
+ * ou null (já tendo respondido 401). Usado pra blindar rotas que mutam estado.
+ */
+async function requireApiKey(
+  c: any,
+  minScope: ApiKeyScope,
+): Promise<{ workspaceId: string; scope: ApiKeyScope } | null> {
+  const key = extractBearer(c.req.raw);
+  const auth = key ? await verifyApiKey(key) : null;
+  if (!auth || !hasScopePermission(auth.scope, minScope)) {
+    c.status(401);
+    return null;
+  }
+  return { workspaceId: auth.workspaceId, scope: auth.scope };
+}
 
 // CORS — apenas origens conhecidas (produção + preview + dev local)
 const ALLOWED_ORIGINS = [
@@ -173,7 +191,13 @@ app.post('/requests', async (c) => {
 // POST /api/v1/requests/:id/approve
 // ----------------------------------------
 app.post('/requests/:id/approve', async (c) => {
+  const auth = await requireApiKey(c, 'write');
+  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   const id = c.req.param('id');
+  // Cross-tenant: o request precisa pertencer ao workspace da API key.
+  const db = getDb();
+  const [reqRow] = await db.select().from(certificateRequests).where(eq(certificateRequests.id, id)).limit(1);
+  if (!reqRow || reqRow.workspaceId !== auth.workspaceId) return c.json({ ok: false, error: 'not_found' }, 404);
   try {
     const result = await issueCredentialFromRequest(id, null);
     if (!result.alreadyEmitted) {
@@ -186,7 +210,12 @@ app.post('/requests/:id/approve', async (c) => {
 });
 
 app.post('/requests/:id/reject', async (c) => {
+  const auth = await requireApiKey(c, 'write');
+  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   const id = c.req.param('id');
+  const db = getDb();
+  const [reqRow] = await db.select().from(certificateRequests).where(eq(certificateRequests.id, id)).limit(1);
+  if (!reqRow || reqRow.workspaceId !== auth.workspaceId) return c.json({ ok: false, error: 'not_found' }, 404);
   const body = await c.req.json().catch(() => ({}));
   const reason = body.reason ?? 'Sem motivo informado';
   try {
@@ -380,11 +409,12 @@ app.post('/demo/issue', async (c) => {
 // GET /api/v1/templates  — lista templates do workspace
 // ----------------------------------------
 app.get('/templates', async (c) => {
-  const slug = c.req.query('workspace') ?? 'univerhair';
+  // Escopo pela API key (não por query param) — antes vazava templates de qualquer
+  // workspace via ?workspace=slug e caía em 'univerhair' por padrão.
+  const auth = await requireApiKey(c, 'read');
+  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   const db = getDb();
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
-  if (!ws) return c.json({ error: 'workspace_not_found' }, 404);
-  const list = await db.select().from(templates).where(eq(templates.workspaceId, ws.id));
+  const list = await db.select().from(templates).where(eq(templates.workspaceId, auth.workspaceId));
   return c.json({ templates: list });
 });
 
@@ -461,7 +491,13 @@ app.get('/templates/:variant/preview', async (c) => {
 // POST /api/v1/credentials/:id/notify
 // ----------------------------------------
 app.post('/credentials/:id/notify', async (c) => {
+  const auth = await requireApiKey(c, 'write');
+  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   const id = c.req.param('id');
+  // Cross-tenant: a credential precisa pertencer ao workspace da API key.
+  const db = getDb();
+  const [cred] = await db.select().from(credentials).where(eq(credentials.id, id)).limit(1);
+  if (!cred || cred.workspaceId !== auth.workspaceId) return c.json({ ok: false, error: 'not_found' }, 404);
   try {
     const result = await notifyRecipient(id);
     return c.json({ ok: true, sent: result });

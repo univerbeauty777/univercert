@@ -26,12 +26,14 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const sig = request.headers.get('x-fluent-signature') ?? request.headers.get('x-signature') ?? '';
 
-  // Valida HMAC se houver secret configurado pra essa workspace
+  // HMAC OBRIGATÓRIO. Sem secret configurado → rejeita (antes pulava a verificação,
+  // permitindo forjar "curso concluído" e emitir certificado falso).
   const secret = await getWebhookSecret(wsSlug, 'fluent');
-  if (secret) {
-    const valid = await verifyHmacSha256(rawBody, sig, secret);
-    if (!valid) return Response.json({ error: 'invalid_signature' }, { status: 401 });
+  if (!secret) {
+    return Response.json({ error: 'webhook_secret_not_configured' }, { status: 401 });
   }
+  const valid = await verifyHmacSha256(rawBody, sig, secret);
+  if (!valid) return Response.json({ error: 'invalid_signature' }, { status: 401 });
 
   let payload: any;
   try {

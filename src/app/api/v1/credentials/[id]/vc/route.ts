@@ -31,7 +31,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     issuer: { id: issuerDid, name: ws?.name ?? 'UniverCert Issuer' },
     validFrom: issuedISO,
     credentialSubject: {
-      id: rcp?.email ? `mailto:${rcp.email}` : `urn:uuid:${cred.recipientId}`,
+      // Endpoint público — sem e-mail plaintext (LGPD). Identidade via urn:uuid.
+      id: `urn:uuid:${cred.recipientId}`,
       type: ['Person', 'EducationalCredentialSubject'],
       name: rcp?.name,
       hasCredential: {

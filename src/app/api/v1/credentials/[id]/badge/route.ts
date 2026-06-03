@@ -27,7 +27,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const issuerId = `${baseUrl}/api/v1/issuers/${ws?.slug ?? 'unknown'}`;
   const credentialUrl = `${baseUrl}/c/${cred.id}`;
   const recipientName = rcp?.name ?? 'Aluno';
-  const recipientEmail = rcp?.email ?? null;
+  // Endpoint público (CORS *, cacheado) — NÃO expor e-mail plaintext (LGPD).
+  // Identidade usa urn:uuid do recipient; nome já é público na página de verify.
   const issuedISO = new Date((cred.issuedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();
 
   // Open Badges 3.0 / Verifiable Credential com proof opcional (assinatura nao incluida nesse MVP)
@@ -49,10 +50,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     description: `Certificado de ${cred.courseName} emitido por ${issuerName}`,
     issuanceDate: issuedISO,
     credentialSubject: {
-      id: recipientEmail ? `mailto:${recipientEmail}` : `urn:uuid:${cred.recipientId}`,
+      id: `urn:uuid:${cred.recipientId}`,
       type: ['AchievementSubject'],
       name: recipientName,
-      ...(recipientEmail ? { email: recipientEmail } : {}),
       achievement: {
         id: `${baseUrl}/api/v1/credentials/${cred.id}/achievement`,
         type: ['Achievement'],

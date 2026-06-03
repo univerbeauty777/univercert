@@ -6,17 +6,25 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces } from '@/db/schema';
+import { verifyApiKey, hasScopePermission, extractBearer } from '@/lib/api-key';
 
 export const runtime = 'edge';
 
 export async function GET(req: Request) {
+  // Requer API key — o statement xAPI inclui PII (nome + e-mail mbox) do aluno.
+  const key = extractBearer(req);
+  const auth = key ? await verifyApiKey(key) : null;
+  if (!auth || !hasScopePermission(auth.scope, 'read')) {
+    return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  }
+
   const url = new URL(req.url);
   const credentialId = url.searchParams.get('credentialId');
   if (!credentialId) return Response.json({ error: 'credentialId obrigatorio' }, { status: 400 });
 
   const db = getDb();
   const [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId)).limit(1);
-  if (!cred) return Response.json({ error: 'not_found' }, { status: 404 });
+  if (!cred || cred.workspaceId !== auth.workspaceId) return Response.json({ error: 'not_found' }, { status: 404 });
 
   const [rcp] = await db.select().from(recipients).where(eq(recipients.id, cred.recipientId)).limit(1);
   const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, cred.workspaceId)).limit(1);

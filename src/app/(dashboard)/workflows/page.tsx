@@ -1,12 +1,14 @@
 // UniverCert · Workflows · Sprint 17
 // Listagem de templates email/WhatsApp customizados por trigger event
 
+import { redirect } from 'next/navigation';
 import { eq, desc } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workflows, workspaces } from '@/db/schema';
+import { workflows } from '@/db/schema';
 import PageHeader from '@/components/PageHeader';
 import StatsBar from '@/components/StatsBar';
 import EmptyState from '@/components/EmptyState';
+import { getCurrentSession, hasPermission } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -19,13 +21,16 @@ const EVENT_LABELS: Record<string, { label: string; emoji: string }> = {
 };
 
 export default async function WorkflowsPage() {
-  const db = getDb();
-  const workspaceSlug = 'univerhair';
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+  if (!hasPermission(sess.member.role, 'editor')) redirect('/dashboard');
 
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, workspaceSlug)).limit(1);
-  const list = ws
-    ? await db.select().from(workflows).where(eq(workflows.workspaceId, ws.id)).orderBy(desc(workflows.updatedAt))
-    : [];
+  const db = getDb();
+  const list = await db
+    .select()
+    .from(workflows)
+    .where(eq(workflows.workspaceId, sess.workspace.id))
+    .orderBy(desc(workflows.updatedAt));
 
   const total = list.length;
   const active = list.filter((w) => w.isActive).length;

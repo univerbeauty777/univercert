@@ -1,36 +1,36 @@
 // UniverCert · /team · Sprint 15 RBAC
 
+import { redirect } from 'next/navigation';
 import { eq, and, isNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workspaceMembers, users, invites, workspaces } from '@/db/schema';
+import { workspaceMembers, users, invites } from '@/db/schema';
 import PageHeader from '@/components/PageHeader';
 import StatsBar from '@/components/StatsBar';
 import EmptyState from '@/components/EmptyState';
 import TeamClient from './TeamClient';
-import { ROLE_LABELS } from '@/lib/rbac';
+import { ROLE_LABELS, getCurrentSession, hasPermission } from '@/lib/rbac';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export default async function TeamPage() {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+  if (!hasPermission(sess.member.role, 'admin')) redirect('/dashboard');
+
   const db = getDb();
-  const workspaceSlug = 'univerhair';
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, workspaceSlug)).limit(1);
+  const wsId = sess.workspace.id;
 
-  const members = ws
-    ? await db
-        .select({ member: workspaceMembers, user: users })
-        .from(workspaceMembers)
-        .leftJoin(users, eq(workspaceMembers.userId, users.id))
-        .where(eq(workspaceMembers.workspaceId, ws.id))
-    : [];
+  const members = await db
+    .select({ member: workspaceMembers, user: users })
+    .from(workspaceMembers)
+    .leftJoin(users, eq(workspaceMembers.userId, users.id))
+    .where(eq(workspaceMembers.workspaceId, wsId));
 
-  const pendingInvites = ws
-    ? await db
-        .select()
-        .from(invites)
-        .where(and(eq(invites.workspaceId, ws.id), isNull(invites.acceptedAt), isNull(invites.revokedAt)))
-    : [];
+  const pendingInvites = await db
+    .select()
+    .from(invites)
+    .where(and(eq(invites.workspaceId, wsId), isNull(invites.acceptedAt), isNull(invites.revokedAt)));
 
   const adminCount = members.filter((m) => m.member.role === 'admin').length;
   const editorCount = members.filter((m) => m.member.role === 'editor').length;

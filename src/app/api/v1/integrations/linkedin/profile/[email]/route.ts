@@ -5,10 +5,20 @@
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { credentials, recipients, workspaces } from '@/db/schema';
+import { verifyApiKey, hasScopePermission, extractBearer } from '@/lib/api-key';
 
 export const runtime = 'edge';
 
 export async function GET(req: Request, ctx: { params: Promise<{ email: string }> }) {
+  // Requer API key — antes qualquer um enumerava o histórico de certs de qualquer
+  // e-mail em TODOS os workspaces (vazamento cross-tenant de PII). Agora escopado
+  // ao workspace da API key.
+  const key = extractBearer(req);
+  const auth = key ? await verifyApiKey(key) : null;
+  if (!auth || !hasScopePermission(auth.scope, 'read')) {
+    return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  }
+
   const { email } = await ctx.params;
   const decoded = decodeURIComponent(email).toLowerCase();
   if (!/^[^@]+@[^@]+\.[^@]+$/.test(decoded)) {
@@ -16,7 +26,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ email: string }
   }
 
   const db = getDb();
-  const rcps = await db.select().from(recipients).where(eq(recipients.email, decoded)).limit(20);
+  const rcps = await db
+    .select()
+    .from(recipients)
+    .where(and(eq(recipients.email, decoded), eq(recipients.workspaceId, auth.workspaceId)))
+    .limit(20);
   if (rcps.length === 0) return Response.json({ ok: true, email: decoded, certifications: [] });
 
   const rcpIds = rcps.map((r) => r.id);
@@ -26,7 +40,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ email: string }
     issuedAt: credentials.issuedAt, courseHours: credentials.courseHours, workspaceId: credentials.workspaceId,
     recipientId: credentials.recipientId,
   }).from(credentials)
-    .where(and(eq(credentials.status, 'issued'), inArray(credentials.recipientId, rcpIds)))
+    .where(and(
+      eq(credentials.status, 'issued'),
+      eq(credentials.workspaceId, auth.workspaceId),
+      inArray(credentials.recipientId, rcpIds),
+    ))
     .orderBy(desc(credentials.issuedAt))
     .limit(50);
 

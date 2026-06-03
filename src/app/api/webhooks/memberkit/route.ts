@@ -17,10 +17,9 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const sig = request.headers.get('x-memberkit-signature') ?? '';
   const secret = await getWebhookSecret(wsSlug, 'memberkit');
-  if (secret) {
-    const valid = await verifyHmacSha256(rawBody, sig, secret);
-    if (!valid) return Response.json({ error: 'invalid_signature' }, { status: 401 });
-  }
+  if (!secret) return Response.json({ error: 'webhook_secret_not_configured' }, { status: 401 });
+  const valid = await verifyHmacSha256(rawBody, sig, secret);
+  if (!valid) return Response.json({ error: 'invalid_signature' }, { status: 401 });
 
   let payload: any;
   try {

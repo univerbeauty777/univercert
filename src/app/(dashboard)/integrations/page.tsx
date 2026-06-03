@@ -1,9 +1,11 @@
 // UniverCert · Configuração de integrações (Sprint 2)
 // Mostra URLs de webhook por provider + permite gerar/copiar webhook secret.
 
+import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { integrations } from '@/db/schema';
+import { getCurrentSession, hasPermission } from '@/lib/rbac';
 import IntegrationCard from './IntegrationCard';
 
 export const runtime = 'edge';
@@ -19,9 +21,13 @@ const PROVIDERS = [
 ];
 
 export default async function IntegrationsPage() {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+  if (!hasPermission(sess.member.role, 'admin')) redirect('/dashboard');
+
   const db = getDb();
-  const workspaceId = 'ws_univerhair';
-  const wsSlug = 'univerhair';
+  const workspaceId = sess.workspace.id;
+  const wsSlug = sess.workspace.slug;
 
   const existing = await db
     .select()
