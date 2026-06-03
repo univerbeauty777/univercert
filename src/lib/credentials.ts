@@ -6,7 +6,7 @@
 import { eq } from 'drizzle-orm';
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import { getDb } from '@/db/client';
-import { certificateRequests, credentials, recipients, workspaces, brandKits } from '@/db/schema';
+import { certificateRequests, credentials, recipients, workspaces, brandKits, templates } from '@/db/schema';
 import { ID } from './ulid';
 
 /**
@@ -28,6 +28,13 @@ export async function renderAndPersistCertificate(credentialId: string): Promise
     if (!row || !row.c) return { ok: false, error: 'CREDENTIAL_NOT_FOUND' };
     if (row.c.pdfR2Key) return { ok: true, pdfKey: row.c.pdfR2Key };
 
+    // Se o credential tem um template customizado fixado, renderiza com ele.
+    let customLayoutJson: string | undefined;
+    if (row.c.templateId) {
+      const [tpl] = await db.select({ layoutJson: templates.layoutJson }).from(templates).where(eq(templates.id, row.c.templateId)).limit(1);
+      if (tpl?.layoutJson) customLayoutJson = tpl.layoutJson;
+    }
+
     const { renderCertificateHtml } = await import('./cert-template');
     const { renderPdfFromHtml } = await import('./render-pdf');
 
@@ -43,7 +50,8 @@ export async function renderAndPersistCertificate(credentialId: string): Promise
       workspaceName: row.w?.name || 'UniverCert',
       primaryColor: row.b?.primaryColor || '#1B2D5E',
       accentColor: row.b?.secondaryColor || '#D4A937',
-      variant: 'classic',
+      variant: customLayoutJson ? 'custom' : 'classic',
+      customLayoutJson,
     });
 
     const pdfBytes = await renderPdfFromHtml(html);

@@ -245,6 +245,13 @@ app.get('/credentials/:id/pdf', async (c) => {
   if (!row || !row.credential) return c.json({ error: 'not_found' }, 404);
   if (row.credential.revokedAt) return c.json({ error: 'revoked' }, 410);
 
+  // Template customizado fixado no credential tem prioridade sobre a variant da query.
+  let customLayoutJson: string | undefined;
+  if (row.credential.templateId) {
+    const [tpl] = await db.select({ layoutJson: templates.layoutJson }).from(templates).where(eq(templates.id, row.credential.templateId)).limit(1);
+    if (tpl?.layoutJson) customLayoutJson = tpl.layoutJson;
+  }
+
   const html = renderCertificateHtml({
     recipientName: row.recipient?.name ?? '(sem nome)',
     cpf: row.recipient?.cpf ?? null,
@@ -257,7 +264,8 @@ app.get('/credentials/:id/pdf', async (c) => {
     verifyUrl: `https://univercert.net/v/${row.credential.id}`,
     primaryColor: row.brand?.primaryColor ?? undefined,
     accentColor: row.brand?.secondaryColor ?? undefined,
-    variant,
+    variant: customLayoutJson ? 'custom' : variant,
+    customLayoutJson,
   });
 
   try {

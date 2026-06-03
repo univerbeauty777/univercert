@@ -1,10 +1,13 @@
 // UniverCert · /integrations/fluent · Wizard 4 steps
 
 import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
 import PageHeader from '@/components/PageHeader';
 import FluentWizardClient from './FluentWizardClient';
 import { getFluentConfig } from './actions';
 import { getCurrentSession, hasPermission } from '@/lib/rbac';
+import { getDb } from '@/db/client';
+import { templates } from '@/db/schema';
 import { CERT_VARIANTS } from '@/lib/cert-template';
 
 export const runtime = 'edge';
@@ -21,6 +24,18 @@ export default async function FluentIntegrationPage() {
   const config = cfgResult.ok ? cfgResult.config : undefined;
   const secret = cfgResult.ok ? cfgResult.secret : null;
 
+  // Templates customizados salvos deste workspace — pra poder mapear curso → template próprio.
+  const db = getDb();
+  const customTpls = await db
+    .select({ id: templates.id, name: templates.name })
+    .from(templates)
+    .where(eq(templates.workspaceId, ws.id));
+
+  const templateOptions = [
+    ...customTpls.map((t) => ({ id: t.id, name: `★ ${t.name}` })),
+    ...CERT_VARIANTS.map((v) => ({ id: v.id, name: v.name })),
+  ];
+
   return (
     <main className="page">
       <PageHeader
@@ -34,7 +49,7 @@ export default async function FluentIntegrationPage() {
         workspaceName={ws.name}
         initialSecret={secret ?? null}
         initialConfig={config ?? { auto_approve: true, send_email: true, default_template: 'classic', course_template_map: {} }}
-        templateOptions={CERT_VARIANTS.map((v) => ({ id: v.id, name: v.name }))}
+        templateOptions={templateOptions}
       />
     </main>
   );

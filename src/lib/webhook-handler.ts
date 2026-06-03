@@ -2,9 +2,9 @@
 // Cada provider extrai o payload no seu formato e chama processWebhook().
 // Sprint 20: lê integration.configJson pra auto_approve + course→template mapping.
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import { getDb } from '@/db/client';
-import { workspaces, integrations, recipients, certificateRequests, webhooksIn, credentials } from '@/db/schema';
+import { workspaces, integrations, recipients, certificateRequests, webhooksIn, credentials, templates } from '@/db/schema';
 import { ID } from './ulid';
 import { computeCertHash } from '@/lib/credentials';
 import { notifyRecipient } from '@/lib/notify';
@@ -140,11 +140,28 @@ export async function processWebhook(
         issuedAt,
       });
 
-      // Course → template mapping (matches por nome exato; fallback default_template)
+      // Course → template mapping (match por nome exato; fallback default_template)
       const mappedTemplate =
         cfg.course_template_map?.[normalized.courseName] ??
         cfg.default_template ??
         null;
+
+      // Se o mapeamento aponta pra um template customizado salvo (por id ou nome)
+      // deste workspace, fixa templateId no credential → o PDF renderiza com ele.
+      let templateId: string | null = null;
+      if (mappedTemplate) {
+        const [tpl] = await db
+          .select({ id: templates.id })
+          .from(templates)
+          .where(
+            and(
+              eq(templates.workspaceId, ws.id),
+              or(eq(templates.id, mappedTemplate), eq(templates.name, mappedTemplate)),
+            ),
+          )
+          .limit(1);
+        if (tpl) templateId = tpl.id;
+      }
 
       const [cred] = await db
         .insert(credentials)
@@ -153,6 +170,7 @@ export async function processWebhook(
           workspaceId: ws.id,
           requestId: req.id,
           recipientId,
+          templateId,
           hashSha256: hash,
           courseName: normalized.courseName,
           courseHours: normalized.courseHours ?? null,
