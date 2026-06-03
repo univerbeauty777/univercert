@@ -52,7 +52,9 @@ APP_NAME = "UniverCert"
 APP_URL = "https://univercert.net"
 DEFAULT_LOCALE = "pt-BR"
 SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
-# RESEND_FROM é gerenciado no dashboard Cloudflare Pages (já existe lá).
+# Remetente Resend. Var em wrangler.toml (source-of-truth) pra sobreviver a cada
+# `wrangler pages deploy`. univercert.net verificado no Resend.
+RESEND_FROM = "UniverCert <no-reply@univercert.net>"
 
 # ----------------------------------------
 # Secrets — definir via: wrangler secret put NOME

@@ -43,3 +43,19 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy .vercel/output/static --project-name=univercert --branch=${{ github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # RESEND_API_KEY precisa ser um SECRET ENCRIPTADO do Pages (sobrevive ao
+      # `wrangler pages deploy`, que reescreve vars plain-text via wrangler.toml).
+      # Aplica no próximo deployment de produção.
+      - name: Push RESEND_API_KEY to Pages runtime (secret)
+        if: github.ref_name == 'main'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ -n "$RESEND_API_KEY" ]; then
+            printf '%s' "$RESEND_API_KEY" | npx wrangler@4 pages secret put RESEND_API_KEY --project-name=univercert
+          else
+            echo "RESEND_API_KEY GitHub secret not set — skipping"
+          fi
