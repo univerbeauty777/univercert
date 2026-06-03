@@ -36,11 +36,12 @@ function parseCsv(text: string): { rows: BulkRow[]; errors: string[] } {
   return { rows, errors };
 }
 
-export default function BulkClient() {
+export default function BulkClient({ templateOptions = [] }: { templateOptions?: Array<{ id: string; name: string }> }) {
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<BulkRow[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [result, setResult] = useState<BulkResult | null>(null);
+  const [templateId, setTemplateId] = useState<string>(templateOptions[0]?.id ?? 'classic');
   const [isPending, startTransition] = useTransition();
 
   const handleParse = () => {
@@ -53,7 +54,7 @@ export default function BulkClient() {
   const handleEmit = () => {
     if (preview.length === 0) return;
     startTransition(async () => {
-      const res = await bulkEmitAction(preview);
+      const res = await bulkEmitAction(preview, { templateId });
       setResult(res);
     });
   };
@@ -77,6 +78,23 @@ export default function BulkClient() {
           value={csv}
           onChange={(e) => setCsv(e.target.value)}
         />
+
+        {templateOptions.length > 0 && (
+          <div className="mt-3">
+            <label className="label" htmlFor="bulk-tpl">Template do certificado</label>
+            <select
+              id="bulk-tpl"
+              className="input"
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+            >
+              {templateOptions.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Aplicado a todos os certificados deste lote.</p>
+          </div>
+        )}
 
         <div className="flex gap-2 mt-3">
           <button onClick={handleParse} className="btn-secondary">Pré-visualizar</button>

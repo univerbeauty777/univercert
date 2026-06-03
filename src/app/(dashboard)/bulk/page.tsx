@@ -1,10 +1,33 @@
 // UniverCert · Bulk emit via CSV (Sprint 2 — UniverHair processa lote de alunos antigos)
 
+import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { templates } from '@/db/schema';
+import { getCurrentSession, hasPermission } from '@/lib/rbac';
+import { CERT_VARIANTS } from '@/lib/cert-template';
 import BulkClient from './BulkClient';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
-export default function BulkPage() {
+export default async function BulkPage() {
+  const sess = await getCurrentSession();
+  if (!sess) redirect('/sign-in');
+  if (!hasPermission(sess.member.role, 'editor')) redirect('/dashboard');
+
+  const db = getDb();
+  const customTpls = await db
+    .select({ id: templates.id, name: templates.name })
+    .from(templates)
+    .where(eq(templates.workspaceId, sess.workspace.id));
+
+  // Custom primeiro (vira o padrão pré-selecionado) + variantes built-in.
+  const templateOptions = [
+    ...customTpls.map((t) => ({ id: t.id, name: `★ ${t.name}` })),
+    ...CERT_VARIANTS.map((v) => ({ id: v.id, name: v.name })),
+  ];
+
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-6">
       <div className="max-w-4xl mx-auto">
@@ -16,7 +39,7 @@ export default function BulkPage() {
           </p>
         </div>
 
-        <BulkClient />
+        <BulkClient templateOptions={templateOptions} />
 
         <div className="mt-8 card text-sm text-gray-600 space-y-2">
           <h3 className="font-bold text-gray-900">Dicas</h3>
