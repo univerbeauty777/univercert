@@ -237,7 +237,7 @@ export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
 ${pageRule}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: ${w}; height: ${h}; }
-body { font-family: 'Inter', sans-serif; color: #0A0E1A; position: relative; overflow: hidden; -webkit-font-smoothing: antialiased; ${bgStyle} }
+body { font-family: 'Inter', sans-serif; color: #0A0E1A; position: relative; overflow: hidden; -webkit-font-smoothing: antialiased; -webkit-print-color-adjust: exact; print-color-adjust: exact; ${bgStyle} }
 .page-bg { position: absolute; inset: 0; z-index: 0; }
 .field-layer { position: absolute; inset: 0; z-index: 10; }
 ${bg && bg.type === 'pdf' ? `

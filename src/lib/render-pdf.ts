@@ -18,7 +18,14 @@ export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
       const resp = await browserBinding.fetch('https://browser/pdf', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ html }),
+        // printBackground: imprime o fundo do template (o design é background-image).
+        // preferCSSPageSize: respeita o @page do template (landscape/portrait/custom).
+        body: JSON.stringify({
+          html,
+          printBackground: true,
+          preferCSSPageSize: true,
+          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+        }),
       });
       if (resp.ok) {
         return await resp.arrayBuffer();
@@ -44,10 +51,15 @@ export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
           'authorization': `Bearer ${cfBrowserToken}`,
           'content-type': 'application/json',
         },
+        // printBackground: o design do certificado é uma background-image; sem isso o PDF
+        //   sai em branco. preferCSSPageSize: respeita o @page do próprio template
+        //   (não força landscape — funciona pra portrait/square/custom também).
         body: JSON.stringify({
           html,
-          viewport: { width: 1240, height: 1754 }, // ~A4 landscape em pixels
-          addStyleTag: [{ content: '@page { margin: 0; size: A4 landscape; }' }],
+          viewport: { width: 1754, height: 1240 }, // A4 landscape em px (renderização)
+          printBackground: true,
+          preferCSSPageSize: true,
+          margin: { top: '0', bottom: '0', left: '0', right: '0' },
         }),
       }
     );
@@ -68,7 +80,7 @@ export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         html,
-        options: { format: 'A4', landscape: true, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 } },
+        options: { printBackground: true, preferCSSPageSize: true, margin: { top: 0, bottom: 0, left: 0, right: 0 } },
       }),
     });
     if (!resp.ok) throw new Error(`browserless ${resp.status}`);
