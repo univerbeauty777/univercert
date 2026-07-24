@@ -18,6 +18,21 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+/**
+ * Origem absoluta (protocolo + host) derivada da verifyUrl.
+ * Usada como <base href> no HTML do certificado: sem isso, quando o Browser
+ * Rendering recebe o HTML como STRING (setContent, sem URL base), assets
+ * servidos por caminho relativo (/api/v1/assets/...) não resolvem e o PDF sai
+ * em branco (fundo/logo não carregam; só o QR de URL absoluta sobrevive).
+ */
+export function originFromVerifyUrl(verifyUrl: string): string {
+  try {
+    return new URL(verifyUrl).origin;
+  } catch {
+    return 'https://univercert.net';
+  }
+}
+
 export type CertArgs = {
   recipientName: string;
   cpf: string | null;

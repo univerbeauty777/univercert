@@ -116,7 +116,7 @@ export function getPageDimensions(layout: Pick<LayoutV2, 'pageSize' | 'orientati
  * Gera HTML A4 com background + fields posicionados absolute.
  * ============================================================ */
 
-import { formatCpf, formatDate, escapeHtml, type CertArgs } from '@/lib/cert-template-shared';
+import { formatCpf, formatDate, escapeHtml, originFromVerifyUrl, type CertArgs } from '@/lib/cert-template-shared';
 
 export type { CertArgs };
 
@@ -199,6 +199,10 @@ function ensureQr(layout: LayoutV2): LayoutV2 {
 /** Renderiza HTML completo do certificado a partir do layout V2 */
 export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
   const layout = ensureQr(rawLayout);
+  // Base absoluta pra assets relativos (/api/v1/assets/...) resolverem quando o
+  // Browser Rendering recebe o HTML como string. Sem isso o fundo/logo não
+  // carregam e o PDF sai em branco.
+  const origin = originFromVerifyUrl(args.verifyUrl);
   const dims = getPageDimensions(layout);
   const isLandscape = layout.orientation === 'landscape';
   const pageSize = layout.pageSize ?? 'A4';
@@ -229,6 +233,7 @@ export function renderLayoutV2(rawLayout: LayoutV2, args: CertArgs): string {
 
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
+<base href="${origin}/">
 <title>Certificado · ${escapeHtml(args.recipientName)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
