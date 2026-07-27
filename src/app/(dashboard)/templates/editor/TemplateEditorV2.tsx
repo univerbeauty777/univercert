@@ -6,7 +6,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { LayoutV2, LayoutField, FieldType, FieldStyle, Orientation, PageSizeName } from '@/lib/layout-v2';
-import { getPageDimensions } from '@/lib/layout-v2';
+import { getPageDimensions, fitPageToArt } from '@/lib/layout-v2';
 import { pdfFileToPngBlob, detectOrientation } from '@/lib/pdf-to-png';
 import { useLayoutHistory } from '@/lib/editor-history';
 import AssetLibraryModal from '@/components/AssetLibraryModal';
@@ -116,6 +116,7 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       let uploadFile: File | Blob = file;
       let detectedOrientation: Orientation | null = null;
       let importedFromLabel = file.name.toLowerCase().split('.').pop() ?? 'file';
+      let artW = 0, artH = 0; // dimensões px da arte → casa a página à proporção (sem barra)
 
       if (file.type === 'application/pdf') {
         setBgStage('Carregando pdf.js…');
@@ -123,7 +124,11 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
         setBgStage('Convertendo página 1…');
         uploadFile = new File([conv.blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' });
         detectedOrientation = detectOrientation(conv.width, conv.height);
+        artW = conv.width; artH = conv.height;
         importedFromLabel = `pdf-pg1-of-${conv.pageCount}`;
+      } else if (file.type !== 'image/svg+xml') {
+        // lê as dimensões reais do raster pra ajustar a página à proporção da arte
+        try { const bmp = await createImageBitmap(file); artW = bmp.width; artH = bmp.height; bmp.close?.(); } catch { /* segue sem ajuste */ }
       }
       setBgStage('Subindo pra R2…');
 
@@ -136,12 +141,16 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
       if (!data.ok) throw new Error(data.error);
 
       const isSvg = file.type === 'image/svg+xml';
-      setLayout((l) => ({
-        ...l,
-        orientation: detectedOrientation ?? l.orientation,
-        background: { type: isSvg ? 'svg' : 'image', src: data.url, cover: false },
-        meta: { ...l.meta, importedFrom: importedFromLabel },
-      }));
+      setLayout((l) => {
+        const withBg: LayoutV2 = {
+          ...l,
+          orientation: detectedOrientation ?? l.orientation,
+          background: { type: isSvg ? 'svg' : 'image', src: data.url, cover: false },
+          meta: { ...l.meta, importedFrom: importedFromLabel },
+        };
+        // casa a página à proporção da arte (remove barras) e reposiciona os campos
+        return artW && artH ? fitPageToArt(withBg, artW, artH) : withBg;
+      });
       commit();
     } catch (e) {
       setErrorMsg('Falha no upload: ' + (e as Error).message);
@@ -545,6 +554,26 @@ export default function TemplateEditorV2({ initialLayout, templateId, templateNa
               className="btn-ghost btn-sm w-full mt-2 text-xs"
             >
               Remover background
+            </button>
+          )}
+          {(layout.background?.type === 'image' || layout.background?.type === 'svg') && (
+            <button
+              onClick={() => {
+                const src = layout.background?.src;
+                if (!src) return;
+                const img = new window.Image();
+                img.onload = () => {
+                  const w = img.naturalWidth, h = img.naturalHeight;
+                  if (w > 0 && h > 0) { setLayout((l) => fitPageToArt(l, w, h)); commit(); }
+                  else setErrorMsg('Não consegui medir a imagem de fundo.');
+                };
+                img.onerror = () => setErrorMsg('Não consegui carregar a imagem de fundo pra ajustar a página.');
+                img.src = src;
+              }}
+              className="btn-secondary btn-sm w-full mt-2 text-xs"
+              title="Deixa a página com a proporção exata da arte (remove as barras brancas) e reposiciona os campos"
+            >
+              📐 Ajustar página à arte
             </button>
           )}
         </div>

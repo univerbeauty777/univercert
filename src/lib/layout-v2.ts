@@ -111,6 +111,57 @@ export function getPageDimensions(layout: Pick<LayoutV2, 'pageSize' | 'orientati
   return layout.orientation === 'portrait' ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
 }
 
+/**
+ * Ajusta a PÁGINA do layout à proporção real da imagem de fundo (imgW×imgH em px),
+ * eliminando as barras brancas (letterbox) do PDF SEM cortar nem distorcer a arte.
+ *
+ * Como os campos foram posicionados em % relativos à página antiga (com a arte em
+ * "contain", ou seja, centralizada com barra), mudar só o tamanho da página
+ * desalinharia o texto. Por isso este helper também REPOSICIONA cada campo: converte
+ * as coordenadas de %(página antiga) → %(retângulo da arte = nova página), mantendo
+ * tudo exatamente onde está visualmente.
+ *
+ * Best-effort: se as dimensões forem inválidas, devolve o layout inalterado.
+ */
+export function fitPageToArt(layout: LayoutV2, imgW: number, imgH: number): LayoutV2 {
+  if (!imgW || !imgH || imgW <= 0 || imgH <= 0) return layout;
+  const iAsp = imgW / imgH;
+  const old = getPageDimensions(layout); // mm (respeita pageSize/orientation atuais)
+  const opW = old.w, opH = old.h;
+  if (!opW || !opH) return layout;
+  const pageAsp = opW / opH;
+
+  // Retângulo que a arte ocupa hoje dentro da página (object-fit: contain)
+  let aW: number, aH: number, offX: number, offY: number;
+  if (iAsp > pageAsp) { aW = opW; aH = opW / iAsp; offX = 0; offY = (opH - aH) / 2; }
+  else { aH = opH; aW = opH * iAsp; offY = 0; offX = (opW - aW) / 2; }
+  if (aW <= 0 || aH <= 0) return layout;
+
+  // Reposiciona cada campo de %(página antiga) → %(retângulo da arte)
+  const fields = layout.fields.map((f) => {
+    const mx = (f.x / 100) * opW, my = (f.y / 100) * opH;
+    const mw = (f.w / 100) * opW, mh = (f.h / 100) * opH;
+    return {
+      ...f,
+      x: ((mx - offX) / aW) * 100,
+      y: ((my - offY) / aH) * 100,
+      w: (mw / aW) * 100,
+      h: (mh / aH) * 100,
+    };
+  });
+
+  return {
+    ...layout,
+    pageSize: 'Custom',
+    customWidth: Math.round(aW * 10) / 10,
+    customHeight: Math.round(aH * 10) / 10,
+    orientation: iAsp >= 1 ? 'landscape' : 'portrait',
+    // a página agora casa com a arte → o fundo preenche 100% (cover evita fio de barra por arredondamento)
+    background: layout.background ? { ...layout.background, cover: true } : layout.background,
+    fields,
+  };
+}
+
 /* ============================================================
  * RENDERER
  * Gera HTML A4 com background + fields posicionados absolute.
