@@ -56,6 +56,13 @@ SUPPORTED_LOCALES = "pt-BR,en-US,es-ES"
 # `wrangler pages deploy`. univercert.net verificado no Resend.
 RESEND_FROM = "UniverCert <no-reply@univercert.net>"
 
+# Browser Rendering REST API (render de PDF dos certificados · S78c).
+# CF_ACCOUNT_ID NÃO é secret (id público da conta) — fica aqui pra sobreviver a
+# cada deploy (mesmo problema do RESEND, que sumia do painel). Metade da config
+# que faltava. A outra metade, CF_BROWSER_API_TOKEN, é secret → NÃO vai aqui:
+# setar via `wrangler pages secret put CF_BROWSER_API_TOKEN`.
+CF_ACCOUNT_ID = "4a89b58af57b3ffb99858479a75b1e61"
+
 # ----------------------------------------
 # Secrets — definir via: wrangler secret put NOME
 # (NÃO commitar secrets neste arquivo!)
