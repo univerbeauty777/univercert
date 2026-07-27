@@ -268,19 +268,35 @@ app.get('/credentials/:id/pdf', async (c) => {
     customLayoutJson,
   });
 
+  // Nome de arquivo bonito com o nome do aluno. Attachment por padrão (baixa como
+  // arquivo); ?inline=1 pra abrir embutido (preview). filename* (RFC 5987) preserva
+  // acentos (ex.: "Nóbrega"); filename ASCII é o fallback pra clientes antigos.
+  const dispType = c.req.query('inline') === '1' ? 'inline' : 'attachment';
+  const rawName = (row.recipient?.name ?? row.credential.id).replace(/[\r\n"]/g, ' ').trim() || row.credential.id;
+  const fileBase = `Certificado - ${rawName}`;
+  const asciiBase = fileBase.normalize('NFKD').replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim() || `certificado-${row.credential.id}`;
+  const contentDisposition = `${dispType}; filename="${asciiBase}.pdf"; filename*=UTF-8''${encodeURIComponent(`${fileBase}.pdf`)}`;
+
   try {
     const pdf = await renderPdfFromHtml(html);
     return new Response(pdf, {
       headers: {
         'content-type': 'application/pdf',
-        'content-disposition': `inline; filename="certificado-${row.credential.id}.pdf"`,
+        'content-disposition': contentDisposition,
         'cache-control': 'public, max-age=3600',
       },
     });
-  } catch {
-    return new Response(html, {
-      headers: { 'content-type': 'text/html; charset=utf-8' },
-    });
+  } catch (err) {
+    // NUNCA servir HTML cru aqui — era o bug (PDF abria como página rolável cortada).
+    // Se o render falhar, retorna erro explícito pra não mascarar o problema.
+    console.error('[pdf] render falhou:', err instanceof Error ? err.message : err);
+    return c.json(
+      {
+        error: 'pdf_unavailable',
+        hint: 'Browser Rendering não disponível: configure CF_ACCOUNT_ID + CF_BROWSER_API_TOKEN (plano Workers Paid).',
+      },
+      503,
+    );
   }
 });
 

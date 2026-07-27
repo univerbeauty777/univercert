@@ -7,8 +7,19 @@
 
 import { getRequestContext } from '@cloudflare/next-on-pages';
 
+// Deriva a viewport (px) das dimensões reais do template (`html, body { width:Xmm; height:Ymm }`).
+// Sem isso, a viewport fixa landscape reflowa templates portrait/custom. ~150dpi (5.9055 px/mm).
+const PX_PER_MM = 5.9055;
+function viewportFromHtml(html: string): { width: number; height: number } {
+  const m = html.match(/html,\s*body\s*\{[^}]*?width:\s*([\d.]+)mm[^}]*?height:\s*([\d.]+)mm/i);
+  const wMm = m ? parseFloat(m[1]) : 297;
+  const hMm = m ? parseFloat(m[2]) : 210;
+  return { width: Math.round(wMm * PX_PER_MM), height: Math.round(hMm * PX_PER_MM) };
+}
+
 export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
   const { env } = getRequestContext();
+  const viewport = viewportFromHtml(html);
 
   // 1) Tenta Browser Rendering binding (Workers only; Pages ignora [browser] no wrangler.toml)
   // @ts-expect-error - BROWSER binding pode não estar configurado ainda
@@ -22,6 +33,7 @@ export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
         // preferCSSPageSize: respeita o @page do template (landscape/portrait/custom).
         body: JSON.stringify({
           html,
+          viewport,
           printBackground: true,
           preferCSSPageSize: true,
           margin: { top: '0', bottom: '0', left: '0', right: '0' },
@@ -54,12 +66,16 @@ export async function renderPdfFromHtml(html: string): Promise<ArrayBuffer> {
         // printBackground: o design do certificado é uma background-image; sem isso o PDF
         //   sai em branco. preferCSSPageSize: respeita o @page do próprio template
         //   (não força landscape — funciona pra portrait/square/custom também).
+        // ATENÇÃO: a REST API exige essas opções aninhadas em `pdfOptions` — no nível
+        //   raiz ela rejeita com 400 unrecognized_keys.
         body: JSON.stringify({
           html,
-          viewport: { width: 1754, height: 1240 }, // A4 landscape em px (renderização)
-          printBackground: true,
-          preferCSSPageSize: true,
-          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+          viewport, // derivada das dims reais do template (portrait/landscape/custom)
+          pdfOptions: {
+            printBackground: true,
+            preferCSSPageSize: true,
+            margin: { top: '0', bottom: '0', left: '0', right: '0' },
+          },
         }),
       }
     );

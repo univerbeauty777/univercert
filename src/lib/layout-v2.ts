@@ -177,8 +177,15 @@ function fieldHtml(field: LayoutField, args: CertArgs, pageHeightMm: number): st
   if (computedFontSize != null) styleObj.fontSize = computedFontSize;
   const css = styleString(styleObj);
   const flexAlign = field.style?.align === 'center' ? 'center' : field.style?.align === 'right' ? 'flex-end' : 'flex-start';
-  return `<div style="${pos} display:flex; align-items:center; justify-content:${flexAlign}; ${css}; box-sizing:border-box; padding:0 4px; word-break:break-word; overflow:hidden;">
-    <span style="display:inline-block; width:100%;">${escapeHtml(content)}</span>
+  // autoFit: nome (ou qualquer texto marcado) renderiza em 1 linha e encolhe via
+  // script até caber na largura da caixa — nunca estoura nem quebra, qualquer nome.
+  const isAutoFit = !!field.style?.autoFit;
+  const wrapBreak = isAutoFit ? '' : 'word-break:break-word;';
+  const spanAttrs = isAutoFit
+    ? `class="af" style="display:inline-block; white-space:nowrap;"`
+    : `style="display:inline-block; width:100%;"`;
+  return `<div style="${pos} display:flex; align-items:center; justify-content:${flexAlign}; ${css}; box-sizing:border-box; padding:0 4px; ${wrapBreak} overflow:hidden;">
+    <span ${spanAttrs}>${escapeHtml(content)}</span>
   </div>`;
 }
 
@@ -255,6 +262,18 @@ ${bg && bg.type === 'pdf' ? `<div class="pdf-bg"><object data="${escapeHtml(bg.s
 <div class="field-layer">
   ${sortedFields.map((f) => fieldHtml(f, args, pageHeightMm)).join('\n  ')}
 </div>
+<script>
+(function(){
+  var els = document.querySelectorAll('.af');
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i], box = el.parentElement, guard = 0;
+    var fs = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > box.clientWidth && fs > 6 && guard < 400) {
+      fs -= 0.5; el.style.fontSize = fs + 'px'; guard++;
+    }
+  }
+})();
+</script>
 </body></html>`;
 }
 
